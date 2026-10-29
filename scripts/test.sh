@@ -49,9 +49,8 @@ case "$DATASET" in
     ;;
 esac
 
-EXTRA=()
 if [[ "${FUSE:-0}" == "1" ]]; then
-  EXTRA+=(--fuse)
+  set -- --fuse "$@"
 fi
 
 python src/test.py \
@@ -71,4 +70,4 @@ python src/test.py \
   --arch "$ARCH" \
   --custom_dataset_img_path "${DATA_ROOT}/${IMG_SPLIT}" \
   --custom_dataset_ann_path "${DATA_ROOT}/annotations/${SPLIT}.json" \
-  "${EXTRA[@]}" "$@"
+  "$@"

@@ -2,9 +2,12 @@
 import copy
 import json
 import os
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 import cv2
 import numpy as np
@@ -85,6 +88,79 @@ class ReleaseTests(unittest.TestCase):
         lines=(self.root/'bundle/gt/SEQ_A/gt/gt.txt').read_text().splitlines()
         self.assertEqual(len(lines),4)
         self.assertEqual({line.split(',')[0] for line in lines},{'1','2'})
+
+    def test_three_dataset_half_pipelines_keep_frames_and_history_separate(self):
+        # Only the training directory is available. SEQ_A is even, SEQ_B is odd.
+        shutil.rmtree(self.root/'val')
+        shutil.rmtree(self.root/'test')
+        seq=self.root/'train/SEQ_B'
+        cv2.imwrite(str(seq/'img1/00000005.jpg'),np.full((64,64,3),125,dtype=np.uint8))
+        with (seq/'gt/gt.txt').open('a') as handle:
+            for tid in (1,2):
+                handle.write(f'5,{tid},{tid*15},15,10,10,1,1,1\n')
+        tracks=self.root/'tracks'
+        tracks.mkdir()
+        for name in ('SEQ_A','SEQ_B'):
+            (tracks/(name+'.txt')).write_text((self.root/'train'/name/'gt/gt.txt').read_text())
+        env=dict(os.environ,DATA_ROOT=str(self.root),
+                 PATH=str(Path(sys.executable).parent)+os.pathsep+os.environ.get('PATH',''))
+        for dataset in ('bee24','mot17','mot20'):
+            with self.subTest(dataset=dataset):
+                subprocess.run(['bash','scripts/prepare_data.sh',dataset,
+                                '--splits','halftrain','halfval','train'],
+                               cwd=str(ROOT),env=env,check=True,capture_output=True,text=True)
+                data={split:json.loads((self.root/'annotations'/f'{split}.json').read_text())
+                      for split in ('halftrain','halfval','train')}
+                paths={split:{im['file_name'] for im in item['images']} for split,item in data.items()}
+                self.assertFalse(paths['halftrain'] & paths['halfval'])
+                self.assertEqual(paths['halftrain'] | paths['halfval'],paths['train'])
+                for split,loader_split in (('halftrain','train'),('halfval','val')):
+                    item=data[split]
+                    self.assertEqual(item['conversion']['half_split_policy'],'balanced')
+                    images={im['id']:im for im in item['images']}
+                    for video in item['videos']:
+                        frames=sorted((im for im in images.values() if im['video_id']==video['id']),
+                                      key=lambda im:im['frame_id'])
+                        length=4 if video['file_name']=='SEQ_A' else 5
+                        expected=list(range(1,length//2+1) if split=='halftrain'
+                                      else range(length//2+1,length+1))
+                        self.assertEqual([im['frame_id'] for im in frames],expected)
+                        self.assertEqual(frames[0]['prev_image_id'],-1)
+                        self.assertEqual(frames[-1]['next_image_id'],-1)
+                        for index,im in enumerate(frames):
+                            self.assertEqual(int(Path(im['file_name']).stem),im['frame_id'])
+                            if index:
+                                self.assertEqual(im['prev_image_id'],frames[index-1]['id'])
+                            if index+1<len(frames):
+                                self.assertEqual(im['next_image_id'],frames[index+1]['id'])
+                    self.assertTrue(all(ann['image_id'] in images for ann in item['annotations']))
+                    opt=options(['--custom_dataset_img_path',str(self.root/'train'),
+                                 '--custom_dataset_ann_path',str(self.root/'annotations'/f'{split}.json')])
+                    loader=CustomDataset(opt,loader_split)
+                    # Check the actual previous-frame loader, not only JSON links.
+                    with patch.object(loader,'_load_image_anns',wraps=loader._load_image_anns) as read:
+                        for im in item['images']:
+                            loader._load_pre_data(im['video_id'],im['frame_id'])
+                            loaded=images[read.call_args.args[0]]
+                            self.assertEqual(loaded['video_id'],im['video_id'])
+                            self.assertIn(loaded['file_name'],paths[split])
+                output=self.root/('bundle_'+dataset)
+                prepare(self.root/'train',self.root/'annotations/halfval.json',tracks,output,dataset)
+                for name,count in (('SEQ_A',2),('SEQ_B',3)):
+                    gt=(output/'gt'/name/'gt/gt.txt').read_text().splitlines()
+                    pred=(output/'trackers'/(name+'.txt')).read_text().splitlines()
+                    self.assertEqual(len(gt),2*count)
+                    self.assertEqual(gt,pred)
+                    self.assertEqual({int(row.split(',')[0]) for row in gt},set(range(1,count+1)))
+
+    def test_legacy_mot_boundary_is_explicit(self):
+        for dataset in ('mot17','mot20'):
+            convert(dataset,self.root,['halftrain','halfval'],half_split='legacy')
+            train=json.loads((self.root/'annotations/halftrain.json').read_text())
+            val=json.loads((self.root/'annotations/halfval.json').read_text())
+            self.assertEqual(train['conversion']['half_split_policy'],'legacy')
+            self.assertEqual({im['frame_id'] for im in train['images']},{1,2,3})
+            self.assertEqual({im['frame_id'] for im in val['images']},{4})
 
     def test_empty_prediction_frames_count_as_misses(self):
         prediction=self.root/'pred.txt'

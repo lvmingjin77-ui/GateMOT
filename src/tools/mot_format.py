@@ -8,7 +8,9 @@ import cv2
 import numpy as np
 
 
-def convert(dataset, root, splits=None):
+def convert(dataset, root, splits=None, half_split='balanced'):
+    if half_split not in ('balanced', 'legacy'):
+        raise ValueError('half_split must be balanced or legacy')
     root = Path(root)
     output = root / 'annotations'
     output.mkdir(parents=True, exist_ok=True)
@@ -30,9 +32,11 @@ def convert(dataset, root, splits=None):
             if not names:
                 continue
             boundary = len(names) // 2
-            # Preserve the existing CenterTrack-style MOT half boundary.
-            if dataset in ('mot17', 'mot20'):
+            # The default uses the first floor(N/2) frames for every dataset.
+            # Legacy mode preserves the earlier MOT17/MOT20 conversion boundary.
+            if half_split == 'legacy' and dataset in ('mot17', 'mot20'):
                 boundary += 1
+            source_frame_count = len(names)
             if split == 'halftrain':
                 names = names[:boundary]
             elif split == 'halfval':
@@ -40,7 +44,9 @@ def convert(dataset, root, splits=None):
             if not names:
                 continue
             video_id = len(data['videos']) + 1
-            data['videos'].append(dict(id=video_id, file_name=sequence.name))
+            data['videos'].append(dict(id=video_id, file_name=sequence.name,
+                source_frame_count=source_frame_count, selected_frame_count=len(names),
+                first_frame_id=int(names[0].stem), last_frame_id=int(names[-1].stem)))
             frame_map = {}
             base = len(data['images'])
             for index, path in enumerate(names):
@@ -87,7 +93,8 @@ def convert(dataset, root, splits=None):
                     conf=float(row[6]) if len(row)>6 else 1.0,
                     iscrowd=0, area=float(row[4]*row[5])))
         data['conversion'] = dict(dataset=dataset, source_split=source, split=split,
-                                  identity_policy='sequence-and-source-ID', version=2)
+                                  identity_policy='sequence-and-source-ID',
+                                  half_split_policy=half_split, version=3)
         (output/(split+'.json')).write_text(json.dumps(data))
         print('{}: {} images, {} annotations, {} identities'.format(split,len(data['images']),len(data['annotations']),len(identity_map)))
 
@@ -95,8 +102,12 @@ def convert(dataset, root, splits=None):
 def main(dataset):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--data-root', default=os.environ.get('DATA_ROOT'))
-    parser.add_argument('--splits', nargs='+')
+    parser.add_argument('--splits', nargs='+',
+                        choices=['train', 'val', 'test', 'halftrain', 'halfval'])
+    parser.add_argument('--half-split', choices=['balanced', 'legacy'], default='balanced',
+                        help='balanced: first floor(N/2) frames for halftrain; '
+                             'legacy: earlier MOT17/MOT20 boundary at floor(N/2)+1')
     args = parser.parse_args()
     if not args.data_root:
         parser.error('Set DATA_ROOT or --data-root')
-    convert(dataset, args.data_root, args.splits)
+    convert(dataset, args.data_root, args.splits, args.half_split)

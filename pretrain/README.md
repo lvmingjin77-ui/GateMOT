@@ -1,8 +1,8 @@
-ImageNet weights used to initialize the DLA encoder. They are not tracking checkpoints.
+# Pretrained models
 
-```bash
-wget -P pretrain http://dl.yf.io/dla/models/imagenet/dla34-ba72cf86.pth
-wget -P pretrain http://dl.yf.io/dla/models/imagenet/dla60-24839fc4.pth
-```
+Download the ImageNet backbone weights here before training:
 
-DLA-34 is the default backbone. SportsMOT uses DLA-60.
+- [dla34-ba72cf86.pth](http://dl.yf.io/dla/models/imagenet/dla34-ba72cf86.pth)
+- [dla60-24839fc4.pth](http://dl.yf.io/dla/models/imagenet/dla60-24839fc4.pth)
+
+GateMOT checkpoint links and evaluation commands are listed in [Models](../docs/MODELS.md). Tracking checkpoint uploads are pending.

@@ -86,51 +86,152 @@ DCN uses torchvision's implementation. Download the ImageNet initialization weig
 - **BEE24, MOT17, MOT20** — [dla34-ba72cf86.pth](http://dl.yf.io/dla/models/imagenet/dla34-ba72cf86.pth)
 - **SportsMOT** — [dla60-24839fc4.pth](http://dl.yf.io/dla/models/imagenet/dla60-24839fc4.pth)
 
-### 2. Choose a dataset
+### 2. Prepare data
 
-Download a dataset using the links below. **The main experiments train on the complete training split and evaluate on the test split.**
+Download and extract the dataset you want to use. **All four main experiments train on the complete training split and evaluate on test.**
 
-| Dataset | `DATASET` | Training | Evaluation |
-|---|---|---|---|
-| [BEE24](https://holmescao.github.io/datasets/BEE24) | `bee24` | Full train | Test |
-| [MOT17](https://motchallenge.net/data/MOT17/) | `mot17` | Full train | Test |
-| [MOT20](https://motchallenge.net/data/MOT20/) | `mot20` | Full train | Test |
-| [SportsMOT](https://github.com/MCG-NJU/SportsMOT) | `sportsmot` | Official train | Official test |
+| Dataset | `DATASET` | Example `DATA_ROOT` |
+|---|---|---|
+| [BEE24](https://holmescao.github.io/datasets/BEE24) | `bee24` | `/path/to/BEE24` |
+| [MOT17](https://motchallenge.net/data/MOT17/) | `mot17` | `/path/to/MOT17` |
+| [MOT20](https://motchallenge.net/data/MOT20/) | `mot20` | `/path/to/MOT20` |
+| [SportsMOT](https://github.com/MCG-NJU/SportsMOT) | `sportsmot` | `/path/to/SportsMOT/dataset` |
 
-Set `DATA_ROOT` to the directory containing `train/` and `test/`. For SportsMOT, use the downloaded archive's `dataset/` subdirectory, which also contains the official `val/`. See [directory layout](docs/DATA_AND_TRAINING.md#directory-layout).
+Each root should contain the following MOT-format directories. SportsMOT's root is the archive's `dataset/` subdirectory.
+
+```text
+DATA_ROOT/
+├── train/SEQ/img1/000001.jpg
+├── train/SEQ/gt/gt.txt
+├── val/SEQ/...                 # SportsMOT only
+├── test/SEQ/img1/000001.jpg
+└── annotations/                # generated below
+```
+
+Run the command for your dataset from the repository root, replacing the example path:
+
+```bash
+DATA_ROOT=/path/to/BEE24 scripts/prepare_data.sh bee24 --splits train test
+DATA_ROOT=/path/to/MOT17 scripts/prepare_data.sh mot17 --splits train test
+DATA_ROOT=/path/to/MOT20 scripts/prepare_data.sh mot20 --splits train test
+DATA_ROOT=/path/to/SportsMOT/dataset scripts/prepare_data.sh sportsmot --splits train val test
+```
+
+This creates `annotations/train.json` and `annotations/test.json`, plus `val.json` for SportsMOT. Images stay in place. Test conversion needs only images, not test GT. See [data format details](docs/DATA_AND_TRAINING.md#directory-layout).
 
 <a id="training"></a>
 
-### 3. Train and track
+### 3. Train
 
-Run from the repository root. This MOT17 example uses the complete training split. For another dataset, change `DATASET` and `DATA_ROOT` using the table above:
+Set the dataset and root to match the data you prepared. The remaining commands work for all four datasets:
 
 ```bash
 export DATASET=mot17 DATA_ROOT=/path/to/MOT17
-
-# Prepare annotations and train on full train.
-scripts/prepare_data.sh "$DATASET"
 ANN_NAME=train NUM_GPUS=2 scripts/train.sh "$DATASET"
+```
 
-# Run the trained model on test images.
+The script selects DLA-34 for BEE24/MOT17/MOT20 and DLA-60 for SportsMOT. It saves checkpoints and `run_config.json` under `exp/tracking.ctdet/${DATASET}_train_qattn_s317/`. `NUM_GPUS` sets the GPU count; `GLOBAL_BATCH` sets the total batch size and must be divisible by it. Default schedules are listed in [training settings](docs/DATA_AND_TRAINING.md#training-settings).
+
+If training is interrupted, resume the same run with:
+
+```bash
+ANN_NAME=train NUM_GPUS=2 scripts/train.sh "$DATASET" \
+  --resume --load_model "exp/tracking.ctdet/${DATASET}_train_qattn_s317/model_last.pth"
+```
+
+### 4. Track the test split
+
+Choose a checkpoint and a fresh results directory:
+
+```bash
 export LOAD_MODEL=exp/tracking.ctdet/${DATASET}_train_qattn_s317/model_last.pth
+if [ "$DATASET" = sportsmot ]; then
+  export LOAD_MODEL=exp/tracking.ctdet/sportsmot_train_qattn_s317/model_70.pth
+fi
 export TRACKERS_FOLDER=results/${DATASET}_test
 SPLIT=test scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER"
 ```
 
-Training saves checkpoints and `run_config.json` in the experiment directory. `NUM_GPUS` sets the GPU count; `GLOBAL_BATCH` sets the total batch size and must be divisible by it. The example uses the last checkpoint. The SportsMOT result in Table 2 uses `model_70.pth` from its 80-epoch schedule.
+The example uses the last checkpoint for BEE24/MOT17/MOT20. For SportsMOT, it selects the Table 2 checkpoint at epoch 70 of the 80-epoch schedule. Tracking writes one MOT-format `.txt` file per sequence to `TRACKERS_FOLDER`.
 
-### 4. Evaluate
+### 5. Evaluate
 
-Tracking writes one MOT-format `.txt` file per sequence. When the evaluated split's ground truth is available locally, compute HOTA, MOTA, and IDF1 with:
+Local evaluation requires `test/SEQ/gt/gt.txt`. If test GT is available, keep the dataset, root, and results directory set above and compute HOTA, MOTA, and IDF1:
 
 ```bash
 SPLIT=test scripts/eval_hota.sh
 ```
 
-Hidden test splits support inference only without their GT. For development, the converter also supports **optional** `halftrain`/`halfval` splits for BEE24, MOT17, and MOT20. SportsMOT has an official validation split. These validation protocols are separate from the full-training main experiments; see [validation instructions](docs/DATA_AND_TRAINING.md#optional-validation).
+Hidden test splits can be tracked without GT, but their scores require the benchmark's evaluation service or released annotations. Metrics are saved under `${TRACKERS_FOLDER}_eval_test/trackers/`. Use fresh tracking and evaluation directories for each run. To rerun metrics alone, set `EVAL_DIR` to a new directory. See [evaluation details](docs/DATA_AND_TRAINING.md#evaluation).
 
-**More:** [training settings and resume](docs/DATA_AND_TRAINING.md#training-settings) · [evaluation details](docs/DATA_AND_TRAINING.md#evaluation).
+<a id="validation"></a>
+
+### When should train be split in half?
+
+**Use half-splits for development when there is no official validation set:** local validation, hyperparameter or checkpoint selection, and ablation studies. For BEE24, MOT17, and MOT20, the first `floor(N/2)` frames of each training sequence form `halftrain`; the remaining frames form `halfval`. Once settings are fixed, train a separate model on **full train** for the main test experiment. A full-training model evaluated on its own second half is not held-out validation.
+
+**SportsMOT already has an official val split**, so use that directly. Neither validation protocol uses test results to choose settings. The main experiments above do not require temporal splitting.
+
+<details>
+<summary><b>Half-training and half-validation commands — BEE24 / MOT17 / MOT20</b></summary>
+
+Prepare the halves for your dataset. These commands need only `train/` and leave the images in place:
+
+```bash
+DATA_ROOT=/path/to/BEE24 scripts/prepare_data.sh bee24 --splits halftrain halfval
+DATA_ROOT=/path/to/MOT17 scripts/prepare_data.sh mot17 --splits halftrain halfval
+DATA_ROOT=/path/to/MOT20 scripts/prepare_data.sh mot20 --splits halftrain halfval
+```
+
+Then train and validate. Change `DATASET` and `DATA_ROOT` for BEE24 or MOT20:
+
+```bash
+export DATASET=mot17 DATA_ROOT=/path/to/MOT17
+ANN_NAME=halftrain NUM_GPUS=2 scripts/train.sh "$DATASET"
+
+export LOAD_MODEL=exp/tracking.ctdet/${DATASET}_halftrain_qattn_s317/model_last.pth
+export TRACKERS_FOLDER=results/${DATASET}_halfval
+SPLIT=halfval scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER"
+SPLIT=halfval scripts/eval_hota.sh
+```
+
+The `_halftrain_` experiment directory keeps this model separate from the full-training model. Replace `model_last.pth` with a numbered checkpoint to validate another epoch, using a new results directory. If resuming this run, keep `ANN_NAME=halftrain` and load its own checkpoint.
+
+</details>
+
+<details>
+<summary><b>Official validation commands — SportsMOT</b></summary>
+
+Prepare the official train/val splits, then train if you do not already have a model from the official training split:
+
+```bash
+export DATASET=sportsmot DATA_ROOT=/path/to/SportsMOT/dataset
+scripts/prepare_data.sh "$DATASET" --splits train val
+ANN_NAME=train NUM_GPUS=2 scripts/train.sh "$DATASET"
+```
+
+Validate a checkpoint using the official val images and GT:
+
+```bash
+export LOAD_MODEL=exp/tracking.ctdet/sportsmot_train_qattn_s317/model_70.pth
+export TRACKERS_FOLDER=results/sportsmot_val
+SPLIT=val scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER"
+SPLIT=val scripts/eval_hota.sh
+```
+
+</details>
+
+<details>
+<summary><b>Optional — visualize an image sequence</b></summary>
+
+```bash
+DEMO=/path/to/SEQ/img1 LOAD_MODEL=/path/to/model.pth ARCH=dla34 \
+  scripts/demo.sh --exp_id demo_mot17
+```
+
+Use `ARCH=dla60` for a SportsMOT checkpoint. This example saves the video to `results/demo_mot17_img1.avi` and rendered frames to `results/demo*.jpg`.
+
+</details>
 
 ## Documentation
 

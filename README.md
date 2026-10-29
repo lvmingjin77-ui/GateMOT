@@ -1,27 +1,74 @@
-# GateMOT
+<h1 align="center">GateMOT: Q-Gated Attention<br>for Dense Object Tracking</h1>
 
-> [**GateMOT: Q-Gated Attention for Dense Object Tracking**](https://arxiv.org/abs/2604.26353)
->
-> Mingjin Lv, Zelin Liu, Feifei Shao, Yi-Ping Phoebe Chen, Junqing Yu, Wei Yang, Zikai Song
->
-> [arXiv:2604.26353](https://arxiv.org/abs/2604.26353) · [PDF](https://arxiv.org/pdf/2604.26353)
+<p align="center">
+  Mingjin Lv, Zelin Liu, Feifei Shao,<br>
+  Yi-Ping Phoebe Chen, Junqing Yu, Wei Yang, Zikai Song
+</p>
 
-GateMOT brings input- and task-dependent feature selection to dense tracking heads under a tight computation budget. Q-Attention uses Query as a gate on Key and preserves an ungated Value path, separating feature selection from costly global pairwise interactions. The same operator serves detection, motion estimation, and identity embedding.
+<p align="center">
+  <a href="https://arxiv.org/abs/2604.26353"><img src="https://img.shields.io/badge/arXiv-2604.26353-b31b1b?style=flat-square" alt="arXiv 2604.26353"></a>
+  <a href="https://arxiv.org/pdf/2604.26353"><img src="https://img.shields.io/badge/Paper-PDF-2563eb?style=flat-square" alt="Read the paper PDF"></a>
+  <a href="docs/MODELS.md#coming-soon"><img src="https://img.shields.io/badge/Models-Coming%20soon-6b7280?style=flat-square" alt="Models coming soon"></a>
+</p>
 
-## Results and model zoo
+<p align="center">
+  <a href="#overview">Overview</a> ·
+  <a href="#results-and-model-zoo">Results &amp; Models</a> ·
+  <a href="#getting-started">Getting started</a> ·
+  <a href="#citation">Citation</a>
+</p>
 
-Test-set results reported in the manuscript. MOT17 and MOT20 use private detections. GateMOT checkpoints are coming soon.
+<a id="overview"></a>
 
-| Dataset | Backbone | HOTA | MOTA | IDF1 | Model |
+## 🔍 Overview
+
+**GateMOT turns Query into a gate, bringing task-specific feature selection to dense tracking heads.**
+
+Detection, motion estimation, and re-identification need different cues from the same dense feature map. Selecting those cues matters most in the decoder, where the computation budget is tight. Q-Attention makes this selection affordable: Query gates Key features directly, removing global pairwise interactions, while an ungated Value path preserves details for each task.
+
+<p align="center">
+  <img src="assets/attention-comparison.png" width="900" alt="Q-Attention uses Gating-Q to select Key features and fuse them with Value, while vanilla attention uses global pairwise matrix multiplications.">
+</p>
+
+- **A gate for each task.** Detection, motion, and ReID heads learn their own input-dependent feature selection.
+- **A path for detail.** An ungated Value branch complements the selected Key features.
+- **Built for dense maps.** The decoder avoids the quadratic spatial affinity matrix of vanilla attention.
+
+<details>
+<summary><b>A closer look at Q-Attention</b></summary>
+
+<p align="center">
+  <img src="assets/q-attention.png" width="850" alt="Q-Attention module with a sigmoid Query gate, element-wise Key selection, local pooling, and concatenation with ungated Value before fusion.">
+</p>
+
+The selected Key features are pooled locally, concatenated with Value, and fused. See the [implementation](src/lib/model/networks/base_model.py) and [module details](docs/IMPLEMENTATION.md#q-attention).
+
+</details>
+
+<a id="results-and-model-zoo"></a>
+
+## 📊 Results and model zoo
+
+Test-set results reported in the paper. MOT17 and MOT20 use private detections.
+
+| Dataset | Backbone | HOTA ↑ | MOTA ↑ | IDF1 ↑ | Model |
 |---|---|---:|---:|---:|---|
-| BEE24 | DLA-34 | 48.4 | 67.8 | 64.5 | [Coming soon](docs/MODELS.md#coming-soon) |
-| SportsMOT | DLA-60 | 76.3 | 96.5 | 79.0 | [Coming soon](docs/MODELS.md#coming-soon) |
-| MOT17 | DLA-34 | 63.3 | 78.0 | 77.9 | [Coming soon](docs/MODELS.md#coming-soon) |
-| MOT20 | DLA-34 | 62.8 | 77.6 | 77.3 | [Coming soon](docs/MODELS.md#coming-soon) |
+| BEE24 | DLA-34 | **48.4** | 67.8 | 64.5 | [Coming soon](docs/MODELS.md#coming-soon) |
+| SportsMOT | DLA-60 | **76.3** | 96.5 | 79.0 | [Coming soon](docs/MODELS.md#coming-soon) |
+| MOT17 | DLA-34 | **63.3** | 78.0 | 77.9 | [Coming soon](docs/MODELS.md#coming-soon) |
+| MOT20 | DLA-34 | **62.8** | 77.6 | 77.3 | [Coming soon](docs/MODELS.md#coming-soon) |
 
-## Installation
+GateMOT checkpoints and their matching configurations are coming soon. You can already train and evaluate your own models with the workflow below. The additional DanceTrack experiment is documented [here](docs/DATA_AND_TRAINING.md#dancetrack).
 
-Use Linux with an NVIDIA GPU and a C/C++ compiler. The reference environment is Python 3.8, PyTorch 2.4.1, torchvision 0.19.1, and CUDA 12.1.
+<a id="getting-started"></a>
+
+## 🚀 Getting started
+
+<a id="installation"></a>
+
+### 1. Install
+
+Use Linux with an NVIDIA GPU and a C/C++ compiler. The reference environment uses Python 3.8, PyTorch 2.4.1, torchvision 0.19.1, and CUDA 12.1.
 
 ```bash
 git clone https://github.com/lvmingjin77-ui/GateMOT.git
@@ -36,119 +83,79 @@ git clone https://github.com/JonathonLuiten/TrackEval.git third_party/TrackEval
 git -C third_party/TrackEval checkout 12c8791b303e0a0b50f753af204249e622d0281a
 ```
 
-DCN uses torchvision's implementation. Before training, download the ImageNet initialization weights into `pretrain/`, keeping the filenames below. SportsMOT uses DLA-60; the other three datasets use DLA-34.
+DCN uses torchvision's implementation. Download the ImageNet initialization weights into `pretrain/`, keeping their filenames:
 
-- [dla34-ba72cf86.pth](http://dl.yf.io/dla/models/imagenet/dla34-ba72cf86.pth)
-- [dla60-24839fc4.pth](http://dl.yf.io/dla/models/imagenet/dla60-24839fc4.pth)
+- **BEE24, MOT17, MOT20** — [dla34-ba72cf86.pth](http://dl.yf.io/dla/models/imagenet/dla34-ba72cf86.pth)
+- **SportsMOT** — [dla60-24839fc4.pth](http://dl.yf.io/dla/models/imagenet/dla60-24839fc4.pth)
 
-## Data preparation
+### 2. Choose a dataset
 
-Download the datasets from their official pages. Set `DATA_ROOT` to the absolute path of the directory containing `train/` and `test/` (and `val/` for SportsMOT).
+Download a dataset using the links below. These settings define the training and validation workflow:
 
-| Dataset | Download | Training split for validation | Validation split |
+| Dataset | `DATASET` | `ANN_NAME` (training) | `SPLIT` (validation) |
 |---|---|---|---|
-| BEE24 | [BEE24](https://holmescao.github.io/datasets/BEE24) | `halftrain` | `halfval` |
-| MOT17 | [MOTChallenge](https://motchallenge.net/data/MOT17/) | `halftrain` | `halfval` |
-| MOT20 | [MOTChallenge](https://motchallenge.net/data/MOT20/) | `halftrain` | `halfval` |
-| SportsMOT | [SportsMOT](https://github.com/MCG-NJU/SportsMOT) | `train` | `val` |
+| [BEE24](https://holmescao.github.io/datasets/BEE24) | `bee24` | `halftrain` | `halfval` |
+| [MOT17](https://motchallenge.net/data/MOT17/) | `mot17` | `halftrain` | `halfval` |
+| [MOT20](https://motchallenge.net/data/MOT20/) | `mot20` | `halftrain` | `halfval` |
+| [SportsMOT](https://github.com/MCG-NJU/SportsMOT) | `sportsmot` | `train` | `val` |
 
-```text
-DATA_ROOT/
-  train/SEQ/img1/000001.jpg
-  train/SEQ/gt/gt.txt
-  val/SEQ/...                 # SportsMOT only
-  test/SEQ/img1/000001.jpg
-  annotations/                # generated below
-```
+`DATA_ROOT` is the absolute path containing `train/`; SportsMOT also needs `val/` and uses the downloaded archive's `dataset/` subdirectory. BEE24, MOT17, and MOT20 use the first `floor(N/2)` frames of each training sequence for training and the remaining frames for validation. Images stay in place; JSON annotations select the frames.
 
-For the SportsMOT archive, `DATA_ROOT` points to its `dataset/` subdirectory. Prepare the training and validation annotations with:
+See [data layout and preparation](docs/DATA_AND_TRAINING.md#directory-layout) for directory examples and earlier split conventions.
 
-```bash
-DATA_ROOT=/path/to/BEE24 scripts/prepare_data.sh bee24 --splits halftrain halfval
-DATA_ROOT=/path/to/MOT17 scripts/prepare_data.sh mot17 --splits halftrain halfval
-DATA_ROOT=/path/to/MOT20 scripts/prepare_data.sh mot20 --splits halftrain halfval
-DATA_ROOT=/path/to/SportsMOT/dataset scripts/prepare_data.sh sportsmot --splits train val
-```
+<a id="training"></a>
+<a id="validation"></a>
 
-For BEE24, MOT17, and MOT20, the first `floor(N/2)` frames of each training sequence form `halftrain`; the rest form `halfval`. Images stay in `train/`, and the JSON files select the frames. SportsMOT uses its official train/val split. These commands do not require test data. See [data details](docs/DATA_AND_TRAINING.md) for annotation formats and earlier split conventions.
+### 3. Train and evaluate
 
-## Training
-
-Run the command for your dataset from the repository root:
+The following example runs MOT17 half-training and half-validation. For another dataset, use its row above and change `DATA_ROOT`. Run from the repository root:
 
 ```bash
-DATA_ROOT=/path/to/BEE24 ANN_NAME=halftrain NUM_GPUS=2 scripts/train.sh bee24
-DATA_ROOT=/path/to/MOT17 ANN_NAME=halftrain NUM_GPUS=2 scripts/train.sh mot17
-DATA_ROOT=/path/to/MOT20 ANN_NAME=halftrain NUM_GPUS=2 scripts/train.sh mot20
-DATA_ROOT=/path/to/SportsMOT/dataset ANN_NAME=train NUM_GPUS=2 scripts/train.sh sportsmot
-```
+export DATASET=mot17 DATA_ROOT=/path/to/MOT17
+export ANN_NAME=halftrain SPLIT=halfval
 
-Dataset settings are in [train.sh](scripts/train.sh). `NUM_GPUS` is the number of GPUs. `GLOBAL_BATCH` overrides the total batch size, which must be divisible by `NUM_GPUS`. Choose these according to available GPU memory; see [training settings and resume](docs/DATA_AND_TRAINING.md#training-settings).
+# Prepare the selected splits and train.
+scripts/prepare_data.sh "$DATASET" --splits "$ANN_NAME" "$SPLIT"
+NUM_GPUS=2 scripts/train.sh "$DATASET"
 
-Checkpoints and `run_config.json` are saved in `exp/tracking.ctdet/<dataset>_<split>_qattn_s317/`. Each run saves `model_last.pth` and numbered checkpoints. Use validation results to select the checkpoint; training does not select a best model automatically.
-
-## Validation
-
-Choose the block matching your training run:
-
-```bash
-# BEE24
-export DATASET=bee24 DATA_ROOT=/path/to/BEE24 SPLIT=halfval
-export LOAD_MODEL=exp/tracking.ctdet/bee24_halftrain_qattn_s317/model_last.pth
-```
-
-```bash
-# MOT17
-export DATASET=mot17 DATA_ROOT=/path/to/MOT17 SPLIT=halfval
-export LOAD_MODEL=exp/tracking.ctdet/mot17_halftrain_qattn_s317/model_last.pth
-```
-
-```bash
-# MOT20
-export DATASET=mot20 DATA_ROOT=/path/to/MOT20 SPLIT=halfval
-export LOAD_MODEL=exp/tracking.ctdet/mot20_halftrain_qattn_s317/model_last.pth
-```
-
-```bash
-# SportsMOT
-export DATASET=sportsmot DATA_ROOT=/path/to/SportsMOT/dataset SPLIT=val
-export LOAD_MODEL=exp/tracking.ctdet/sportsmot_train_qattn_s317/model_last.pth
-```
-
-Then run tracking and compute HOTA, MOTA, and IDF1 with TrackEval:
-
-```bash
+# Track the validation split, then evaluate with TrackEval.
+export LOAD_MODEL=exp/tracking.ctdet/${DATASET}_${ANN_NAME}_qattn_s317/model_last.pth
 export TRACKERS_FOLDER=results/${DATASET}_${SPLIT}
 scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER"
 scripts/eval_hota.sh
 ```
 
-Replace `LOAD_MODEL` with a numbered checkpoint to evaluate another epoch. Use a new results directory for each run. Evaluation follows the selected JSON, including frames with no predictions, and leaves the source GT unchanged.
+Training saves checkpoints and `run_config.json` in the experiment directory. Replace `model_last.pth` with a numbered checkpoint when selecting a model on validation data. Use a fresh results directory for each run. `NUM_GPUS` controls the GPU count; `GLOBAL_BATCH` sets the total batch size and must be divisible by it.
 
-## Test-set inference
+**Next steps:** [all four validation commands](docs/DATA_AND_TRAINING.md#validation) · [training settings and resume](docs/DATA_AND_TRAINING.md#training-settings) · [full training and test inference](docs/DATA_AND_TRAINING.md#test-set-inference).
 
-After choosing settings on validation data, train on the complete training split for test-set inference. For example, on MOT17:
+Tracking produces MOT-format result files. Local metrics require GT; hidden test splits can be tracked but cannot be scored locally.
 
-```bash
-export DATASET=mot17 DATA_ROOT=/path/to/MOT17
-scripts/prepare_data.sh "$DATASET" --splits train test
-ANN_NAME=train NUM_GPUS=2 scripts/train.sh "$DATASET"
-SPLIT=test LOAD_MODEL=exp/tracking.ctdet/mot17_train_qattn_s317/model_last.pth \
-  scripts/test.sh "$DATASET" --output_dir results/mot17_test
-```
+## Documentation
 
-The same workflow supports BEE24 and MOT20 by changing the dataset, paths, and checkpoint. SportsMOT already trains on its official `train` split; convert `--splits test` and run its trained model with `SPLIT=test`. See [all four test commands](docs/DATA_AND_TRAINING.md#test-set-inference).
-
-Tracking writes one MOT-format `.txt` file per sequence. Local metric evaluation requires GT; hidden test splits produce result files only. The Model Zoo will provide the checkpoints and corresponding settings for the reported results.
-
-## More information
-
-- [Data, training, and test commands](docs/DATA_AND_TRAINING.md)
-- [Q-Attention and implementation details](docs/IMPLEMENTATION.md)
-- [Decoder and task-head ablations](docs/CONTROLS.md)
-- [Additional DanceTrack experiment](docs/DATA_AND_TRAINING.md#dancetrack)
-- [Software checks](docs/VALIDATION.md)
+| Topic | Guide |
+|---|---|
+| Data preparation, training, and evaluation | [Data and training](docs/DATA_AND_TRAINING.md) |
+| Q-Attention, losses, and association | [Implementation](docs/IMPLEMENTATION.md) |
+| Decoder comparisons and task-head controls | [Ablations](docs/CONTROLS.md) |
+| Train/resume/inference checks | [Software validation](docs/VALIDATION.md) |
 
 ## Acknowledgements
 
-Built on [CenterTrack](https://github.com/xingyizhou/CenterTrack), [DLA](https://github.com/ucbdrive/dla), [FairMOT](https://github.com/ifzhang/FairMOT), and [ByteTrack](https://github.com/FoundationVision/ByteTrack). See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+Built on [CenterTrack](https://github.com/xingyizhou/CenterTrack), [DLA](https://github.com/ucbdrive/dla), [FairMOT](https://github.com/ifzhang/FairMOT), and [ByteTrack](https://github.com/FoundationVision/ByteTrack). We thank their authors for sharing their work. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+
+## Citation
+
+If you find GateMOT useful in your research, please cite:
+
+```bibtex
+@misc{lv2026gatemot,
+  title         = {{GateMOT}: {Q}-Gated Attention for Dense Object Tracking},
+  author        = {Lv, Mingjin and Liu, Zelin and Shao, Feifei and Chen, Yi-Ping Phoebe and Yu, Junqing and Yang, Wei and Song, Zikai},
+  year          = {2026},
+  eprint        = {2604.26353},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CV},
+  url           = {https://arxiv.org/abs/2604.26353}
+}
+```

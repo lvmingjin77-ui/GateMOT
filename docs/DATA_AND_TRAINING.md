@@ -45,7 +45,7 @@ scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER"
 scripts/eval_hota.sh
 ```
 
-Change the dataset, root, checkpoint, and output paths together for BEE24 or MOT20. The README includes [the validation settings for all four main datasets](../README.md#validation).
+Change the dataset, root, checkpoint, and output paths together for BEE24 or MOT20. See [Validation](#validation) for the settings for all four main datasets.
 
 The default MOT17/MOT20 boundary changed from the earlier `floor(N/2)+1` split. Regenerate both JSON files together. Use the original annotations when evaluating an older checkpoint against its original validation split, or pass `--half-split legacy` to regenerate the earlier boundary.
 
@@ -92,6 +92,44 @@ DATA_ROOT=/path/to/MOT17 ANN_NAME=halftrain NUM_GPUS=2 scripts/train.sh mot17 \
 ```
 
 Resume restores model and optimizer state. See [implementation details](IMPLEMENTATION.md) for losses, augmentation, association, and differences between the released defaults and the submitted supplementary description.
+
+## Validation
+
+After preparing the annotations and training, choose the block matching your dataset. BEE24, MOT17, and MOT20 evaluate a `halftrain` model on `halfval`; SportsMOT evaluates its official `train` model on `val`. Install TrackEval as described in [Installation](../README.md#installation) before running the shared evaluation command.
+
+```bash
+# BEE24
+export DATASET=bee24 DATA_ROOT=/path/to/BEE24 SPLIT=halfval
+export LOAD_MODEL=exp/tracking.ctdet/bee24_halftrain_qattn_s317/model_last.pth
+```
+
+```bash
+# MOT17
+export DATASET=mot17 DATA_ROOT=/path/to/MOT17 SPLIT=halfval
+export LOAD_MODEL=exp/tracking.ctdet/mot17_halftrain_qattn_s317/model_last.pth
+```
+
+```bash
+# MOT20
+export DATASET=mot20 DATA_ROOT=/path/to/MOT20 SPLIT=halfval
+export LOAD_MODEL=exp/tracking.ctdet/mot20_halftrain_qattn_s317/model_last.pth
+```
+
+```bash
+# SportsMOT
+export DATASET=sportsmot DATA_ROOT=/path/to/SportsMOT/dataset SPLIT=val
+export LOAD_MODEL=exp/tracking.ctdet/sportsmot_train_qattn_s317/model_last.pth
+```
+
+Then run tracking and compute HOTA, MOTA, and IDF1:
+
+```bash
+export TRACKERS_FOLDER=results/${DATASET}_${SPLIT}
+scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER"
+scripts/eval_hota.sh
+```
+
+These checkpoint paths follow the default experiment names. Replace `LOAD_MODEL` with a numbered checkpoint to evaluate another epoch, and choose a new `TRACKERS_FOLDER` for each run. See [Evaluation](#evaluation) for metric outputs and rerunning evaluation.
 
 ## Test-set inference
 

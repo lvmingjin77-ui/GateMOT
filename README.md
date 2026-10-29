@@ -7,13 +7,11 @@
 
 <p align="center">
   <a href="https://arxiv.org/abs/2604.26353"><img src="https://img.shields.io/badge/arXiv-2604.26353-b31b1b?style=flat-square" alt="arXiv 2604.26353"></a>
-  <a href="https://arxiv.org/pdf/2604.26353"><img src="https://img.shields.io/badge/Paper-PDF-2563eb?style=flat-square" alt="Read the paper PDF"></a>
-  <a href="docs/MODELS.md#coming-soon"><img src="https://img.shields.io/badge/Models-Coming%20soon-6b7280?style=flat-square" alt="Models coming soon"></a>
 </p>
 
 <p align="center">
   <a href="#overview">Overview</a> ·
-  <a href="#results-and-model-zoo">Results &amp; Models</a> ·
+  <a href="#results">Results</a> ·
   <a href="#getting-started">Getting started</a> ·
   <a href="#citation">Citation</a>
 </p>
@@ -45,9 +43,9 @@ The selected Key features are pooled locally, concatenated with Value, and fused
 
 </details>
 
-<a id="results-and-model-zoo"></a>
+<a id="results"></a>
 
-## 📊 Results and model zoo
+## 📊 Results
 
 Test-set results reported in the paper. MOT17 and MOT20 use private detections.
 
@@ -58,7 +56,7 @@ Test-set results reported in the paper. MOT17 and MOT20 use private detections.
 | MOT17 | DLA-34 | **63.3** | 78.0 | 77.9 | [Coming soon](docs/MODELS.md#coming-soon) |
 | MOT20 | DLA-34 | **62.8** | 77.6 | 77.3 | [Coming soon](docs/MODELS.md#coming-soon) |
 
-GateMOT checkpoints and their matching configurations are coming soon. You can already train and evaluate your own models with the workflow below. The additional DanceTrack experiment is documented [here](docs/DATA_AND_TRAINING.md#dancetrack).
+GateMOT checkpoints and their matching configurations are coming soon. This release provides the complete main-method pipeline for all four datasets.
 
 <a id="getting-started"></a>
 
@@ -90,46 +88,49 @@ DCN uses torchvision's implementation. Download the ImageNet initialization weig
 
 ### 2. Choose a dataset
 
-Download a dataset using the links below. These settings define the training and validation workflow:
+Download a dataset using the links below. **The main experiments train on the complete training split and evaluate on the test split.**
 
-| Dataset | `DATASET` | `ANN_NAME` (training) | `SPLIT` (validation) |
+| Dataset | `DATASET` | Training | Evaluation |
 |---|---|---|---|
-| [BEE24](https://holmescao.github.io/datasets/BEE24) | `bee24` | `halftrain` | `halfval` |
-| [MOT17](https://motchallenge.net/data/MOT17/) | `mot17` | `halftrain` | `halfval` |
-| [MOT20](https://motchallenge.net/data/MOT20/) | `mot20` | `halftrain` | `halfval` |
-| [SportsMOT](https://github.com/MCG-NJU/SportsMOT) | `sportsmot` | `train` | `val` |
+| [BEE24](https://holmescao.github.io/datasets/BEE24) | `bee24` | Full train | Test |
+| [MOT17](https://motchallenge.net/data/MOT17/) | `mot17` | Full train | Test |
+| [MOT20](https://motchallenge.net/data/MOT20/) | `mot20` | Full train | Test |
+| [SportsMOT](https://github.com/MCG-NJU/SportsMOT) | `sportsmot` | Official train | Official test |
 
-`DATA_ROOT` is the absolute path containing `train/`; SportsMOT also needs `val/` and uses the downloaded archive's `dataset/` subdirectory. BEE24, MOT17, and MOT20 use the first `floor(N/2)` frames of each training sequence for training and the remaining frames for validation. Images stay in place; JSON annotations select the frames.
-
-See [data layout and preparation](docs/DATA_AND_TRAINING.md#directory-layout) for directory examples and earlier split conventions.
+Set `DATA_ROOT` to the directory containing `train/` and `test/`. For SportsMOT, use the downloaded archive's `dataset/` subdirectory, which also contains the official `val/`. See [directory layout](docs/DATA_AND_TRAINING.md#directory-layout).
 
 <a id="training"></a>
-<a id="validation"></a>
 
-### 3. Train and evaluate
+### 3. Train and track
 
-The following example runs MOT17 half-training and half-validation. For another dataset, use its row above and change `DATA_ROOT`. Run from the repository root:
+Run from the repository root. This MOT17 example uses the complete training split. For another dataset, change `DATASET` and `DATA_ROOT` using the table above:
 
 ```bash
 export DATASET=mot17 DATA_ROOT=/path/to/MOT17
-export ANN_NAME=halftrain SPLIT=halfval
 
-# Prepare the selected splits and train.
-scripts/prepare_data.sh "$DATASET" --splits "$ANN_NAME" "$SPLIT"
-NUM_GPUS=2 scripts/train.sh "$DATASET"
+# Prepare annotations and train on full train.
+scripts/prepare_data.sh "$DATASET"
+ANN_NAME=train NUM_GPUS=2 scripts/train.sh "$DATASET"
 
-# Track the validation split, then evaluate with TrackEval.
-export LOAD_MODEL=exp/tracking.ctdet/${DATASET}_${ANN_NAME}_qattn_s317/model_last.pth
-export TRACKERS_FOLDER=results/${DATASET}_${SPLIT}
-scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER"
-scripts/eval_hota.sh
+# Run the trained model on test images.
+export LOAD_MODEL=exp/tracking.ctdet/${DATASET}_train_qattn_s317/model_last.pth
+export TRACKERS_FOLDER=results/${DATASET}_test
+SPLIT=test scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER"
 ```
 
-Training saves checkpoints and `run_config.json` in the experiment directory. Replace `model_last.pth` with a numbered checkpoint when selecting a model on validation data. Use a fresh results directory for each run. `NUM_GPUS` controls the GPU count; `GLOBAL_BATCH` sets the total batch size and must be divisible by it.
+Training saves checkpoints and `run_config.json` in the experiment directory. `NUM_GPUS` sets the GPU count; `GLOBAL_BATCH` sets the total batch size and must be divisible by it. The example uses the last checkpoint. The SportsMOT result in Table 2 uses `model_70.pth` from its 80-epoch schedule.
 
-**Next steps:** [all four validation commands](docs/DATA_AND_TRAINING.md#validation) · [training settings and resume](docs/DATA_AND_TRAINING.md#training-settings) · [full training and test inference](docs/DATA_AND_TRAINING.md#test-set-inference).
+### 4. Evaluate
 
-Tracking produces MOT-format result files. Local metrics require GT; hidden test splits can be tracked but cannot be scored locally.
+Tracking writes one MOT-format `.txt` file per sequence. When the evaluated split's ground truth is available locally, compute HOTA, MOTA, and IDF1 with:
+
+```bash
+SPLIT=test scripts/eval_hota.sh
+```
+
+Hidden test splits support inference only without their GT. For development, the converter also supports **optional** `halftrain`/`halfval` splits for BEE24, MOT17, and MOT20. SportsMOT has an official validation split. These validation protocols are separate from the full-training main experiments; see [validation instructions](docs/DATA_AND_TRAINING.md#optional-validation).
+
+**More:** [training settings and resume](docs/DATA_AND_TRAINING.md#training-settings) · [evaluation details](docs/DATA_AND_TRAINING.md#evaluation).
 
 ## Documentation
 
@@ -137,7 +138,6 @@ Tracking produces MOT-format result files. Local metrics require GT; hidden test
 |---|---|
 | Data preparation, training, and evaluation | [Data and training](docs/DATA_AND_TRAINING.md) |
 | Q-Attention, losses, and association | [Implementation](docs/IMPLEMENTATION.md) |
-| Decoder comparisons and task-head controls | [Ablations](docs/CONTROLS.md) |
 | Train/resume/inference checks | [Software validation](docs/VALIDATION.md) |
 
 ## Acknowledgements

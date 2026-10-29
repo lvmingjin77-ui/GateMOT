@@ -10,7 +10,3 @@ this_dir = osp.dirname(__file__)
 # Add lib to PYTHONPATH
 lib_path = osp.join(this_dir, 'lib')
 add_path(lib_path)
-
-# Add DCNv2 to PYTHONPATH
-dcn_path = osp.join(this_dir, '..', 'DCNv2')
-add_path(dcn_path)

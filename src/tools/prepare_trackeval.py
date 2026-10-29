@@ -59,5 +59,5 @@ if __name__=='__main__':
     parser.add_argument('--annotations',required=True)
     parser.add_argument('--tracks',required=True)
     parser.add_argument('--output',required=True)
-    parser.add_argument('--dataset',required=True,choices=['bee24','mot17','mot20','sportsmot','dancetrack'])
+    parser.add_argument('--dataset',required=True,choices=['bee24','mot17','mot20','sportsmot'])
     prepare(**vars(parser.parse_args()))

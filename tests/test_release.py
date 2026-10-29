@@ -1,4 +1,4 @@
-"""Regression tests for data identity, evaluation frames and decoder controls."""
+"""Regression tests for data identity, evaluation frames and Q-Attention."""
 import copy
 import json
 import os
@@ -42,7 +42,7 @@ def fixture(root):
 def options(extra=()):
     parser=opts()
     return parser.update_res_info_and_set_heads(parser.parse([
-        '--use_bfl','--wh','--pre_hm','--no_pretrained',
+        '--wh','--pre_hm','--no_pretrained',
         '--input_h','128','--input_w','128']+list(extra)))
 
 
@@ -56,7 +56,7 @@ class ReleaseTests(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_identity_is_stable_and_video_specific(self):
-        for dataset in ('bee','mot17','mot20','sportsmot','dancetrack'):
+        for dataset in ('bee','mot17','mot20','sportsmot'):
             convert(dataset,self.root,['train'])
             data=json.loads((self.root/'annotations/train.json').read_text())
             video={x['id']:x['video_id'] for x in data['images']}
@@ -76,7 +76,7 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(len(dataset),8)
 
     def test_half_split_and_trackeval_bundle(self):
-        convert('bee',self.root)
+        convert('bee',self.root,['halftrain','halfval'])
         train=json.loads((self.root/'annotations/halftrain.json').read_text())
         val=json.loads((self.root/'annotations/halfval.json').read_text())
         self.assertFalse({x['file_name'] for x in train['images']} & {x['file_name'] for x in val['images']})
@@ -88,6 +88,26 @@ class ReleaseTests(unittest.TestCase):
         lines=(self.root/'bundle/gt/SEQ_A/gt/gt.txt').read_text().splitlines()
         self.assertEqual(len(lines),4)
         self.assertEqual({line.split(',')[0] for line in lines},{'1','2'})
+
+    def test_default_main_splits_do_not_read_test_ground_truth(self):
+        # Hidden test labels must never enter the converted training manifests.
+        # Deliberately invalid files make an accidental test-GT read fail.
+        for path in (self.root/'test').glob('*/gt/gt.txt'):
+            path.write_text('synthetic test labels are reserved for evaluation\n')
+        for dataset in ('bee','mot17','mot20','sportsmot'):
+            with self.subTest(dataset=dataset):
+                shutil.rmtree(self.root/'annotations',ignore_errors=True)
+                convert(dataset,self.root)
+                expected={'train','val','test'} if dataset=='sportsmot' else {'train','test'}
+                self.assertEqual({p.stem for p in (self.root/'annotations').glob('*.json')},expected)
+                train=json.loads((self.root/'annotations/train.json').read_text())
+                test=json.loads((self.root/'annotations/test.json').read_text())
+                self.assertEqual(len(train['images']),8)
+                self.assertEqual(len(train['annotations']),16)
+                self.assertEqual({im['frame_id'] for im in train['images']},{1,2,3,4})
+                self.assertEqual(len(test['images']),8)
+                self.assertEqual(test['annotations'],[])
+                self.assertEqual(test['conversion']['source_split'],'test')
 
     def test_three_dataset_half_pipelines_keep_frames_and_history_separate(self):
         # Only the training directory is available. SEQ_A is even, SEQ_B is odd.
@@ -182,13 +202,17 @@ class ReleaseTests(unittest.TestCase):
         expected.square().mean().backward()
         self.assertTrue(torch.isfinite(x.grad).all())
 
-    def test_head_override_retains_outputs_and_losses(self):
-        opt=options(['--head_overrides','tracking:conv_bn'])
+    def test_task_heads_have_independent_qattention(self):
+        opt=options()
         model=create_model(opt.arch,opt.heads,opt.head_conv,opt)
         self.assertEqual(set(model.heads),{'hm','reg','tracking','ltrb_amodal','wh','reid'})
-        self.assertIsInstance(model.hm[0],QAttention)
-        self.assertIsInstance(model.tracking[0][1],torch.nn.BatchNorm2d)
-        self.assertGreater(opt.weights['tracking'],0)
+        gates=[]
+        for name in model.heads:
+            head=getattr(model,name)
+            self.assertIsInstance(head[0],QAttention)
+            self.assertGreater(opt.weights[name],0)
+            gates.append(head[0].conv3.weight)
+        self.assertEqual(len({id(gate) for gate in gates}),len(model.heads))
 
     def test_affine_augmentation_accepts_scalar_and_vector_scale(self):
         from dataset.generic_dataset import GenericDataset
@@ -198,16 +222,6 @@ class ReleaseTests(unittest.TestCase):
             center,aug,rotation=dataset._get_aug_param(np.array([32.,32.]),scale,64,64)
             self.assertTrue(np.isfinite(center).all())
             self.assertTrue(np.isfinite(aug))
-
-    def test_gating_controls_propagate_finite_gradients(self):
-        from model.networks.gating_controls import GatingControl
-        for size in (1,3):
-            layer=GatingControl(8,16,size)
-            x=torch.randn(2,8,8,8,requires_grad=True)
-            out=layer(x)
-            self.assertEqual(tuple(out.shape),(2,16,8,8))
-            out.square().mean().backward()
-            self.assertTrue(torch.isfinite(x.grad).all())
 
     def test_checkpoint_mismatch_is_rejected(self):
         opt=options()

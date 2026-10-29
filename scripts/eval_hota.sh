@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 : "${DATA_ROOT:?Set DATA_ROOT to the dataset root}"
-: "${DATASET:?Set DATASET to bee24, mot17, mot20, sportsmot or dancetrack}"
+: "${DATASET:?Set DATASET to bee24, mot17, mot20 or sportsmot}"
 : "${TRACKERS_FOLDER:?Set TRACKERS_FOLDER to the tracking txt directory}"
 SPLIT=${SPLIT:-test}
 IMG_SPLIT=$SPLIT

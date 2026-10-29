@@ -15,8 +15,8 @@ def convert(dataset, root, splits=None, half_split='balanced'):
     output = root / 'annotations'
     output.mkdir(parents=True, exist_ok=True)
     if splits is None:
-        splits = (['train', 'val', 'test'] if dataset in ('sportsmot', 'dancetrack')
-                  else ['halftrain', 'halfval', 'train', 'test'])
+        splits = (['train', 'val', 'test'] if dataset == 'sportsmot'
+                  else ['train', 'test'])
     for split in splits:
         source = 'train' if split.startswith('half') else split
         directory = root / source

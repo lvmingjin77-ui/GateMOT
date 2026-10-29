@@ -38,11 +38,8 @@ class opts(object):
                                   'Reloaded the optimizer parameter and '
                                   'set load_model to model_xx.pth '
                                   'in the exp dir if load_model is not empty.') 
-    self.parser.add_argument('--dataset', default='custom',
-                             help='see lib/dataset/dataset_facotry for ' + 
-                            'available datasets')
-    self.parser.add_argument('--test_dataset', default='custom',
-                             help='coco | kitti | coco_hp | pascal')
+    self.parser.add_argument('--dataset', default='custom', choices=['custom'],
+                             help='MOT-format data loaded from the specified image directory and annotation JSON')
     
     # system  
     self.parser.add_argument('--seed', type=int, default=317, 
@@ -75,18 +72,8 @@ class opts(object):
     self.parser.add_argument('--load_model', default='',
                              help='path to pretrained model')
     self.parser.add_argument('--arch', default='dla34', 
-                             help='model architecture. Currently tested'
-                                  'res_18 | res_101 | resdcn_18 | resdcn_101 |'
-                                  'dlav0_34 | dla_34 | hourglass')
+                             help='DLA backbone: dla34 for BEE24/MOT17/MOT20, dla60 for SportsMOT')
     self.parser.add_argument('--dla_node', default='dcn') 
-    self.parser.add_argument('--use_bfl', '--use_qattn', action='store_true',
-                             help='Use Q-Attention in every task head. '
-                                  'Without this flag the head is the convolutional baseline.')
-    self.parser.add_argument('--conv_bn', action='store_true',
-                             help='Add BatchNorm after the convolutional baseline. '
-                                  'Not used by the published Conv comparison.') 
-    self.parser.add_argument('--head_type', choices=['qattn','conv','conv_bn','glu','gated_conv'], default=None)
-    self.parser.add_argument('--head_overrides', default='', help='Comma-separated head:type overrides, retaining all outputs and losses')
     self.parser.add_argument('--no_pretrained', action='store_true', help='Random initialization for smoke tests, not reported training')
     self.parser.add_argument('--allow_partial_load', action='store_true', help='Explicit transfer initialization only; not benchmark evaluation')
     self.parser.add_argument('--device', choices=['auto','cpu','cuda'], default='auto')
@@ -95,12 +82,9 @@ class opts(object):
     self.parser.add_argument('--output_dir', default='')
     self.parser.add_argument('--fuse', action='store_true') 
     self.parser.add_argument('--head_conv', type=int, default= 256,
-                             help='conv layer channels for output head'
-                                  '0 for no conv layer'
-                                  '-1 for default setting: '
-                                  '64 for resnets and 256 for dla.')
+                             help='hidden channels in each Q-Attention prediction head; '
+                                  '-1 selects the default width.')
     self.parser.add_argument('--num_head_conv', type=int, default=1)
-    self.parser.add_argument('--head_kernel', type=int, default=3, help='')
     self.parser.add_argument('--down_ratio', type=int, default=4,
                              help='output stride. Currently only supports 4.')
     self.parser.add_argument('--not_idaup', action='store_true')# F
@@ -257,9 +241,6 @@ class opts(object):
     else:
       opt = self.parser.parse_args(args)
   
-    if opt.test_dataset == '':# custem
-      opt.test_dataset = opt.dataset
-    
     opt.test_scales = [float(i) for i in opt.test_scales.split(',')]
     opt.save_imgs = [i for i in opt.save_imgs.split(',')] \
       if opt.save_imgs != '' else []
@@ -268,9 +249,6 @@ class opts(object):
       if opt.ignore_loaded_cats != '' else []# --- opt.save_imgs = []  opt.ignore_loaded_cats = []
 
 
-    if opt.head_type is None:
-      opt.head_type = 'qattn' if opt.use_bfl else ('conv_bn' if opt.conv_bn else 'conv')
-    opt.head_overrides = dict(item.split(':',1) for item in opt.head_overrides.split(',') if item)
     opt.pre_img = False
     if 'tracking' in opt.task:
       if opt.local_rank in [-1,0]:
@@ -322,10 +300,6 @@ class opts(object):
     if opt.reid:
       opt.heads.update({'reid': 128})
       
-    unknown = set(opt.head_overrides) - set(opt.heads)
-    if unknown:
-      raise ValueError('Unknown head overrides: {}'.format(sorted(unknown)))
-
     # the loss weight per head
     weight_dict = {'hm': opt.hm_weight, 'reg': opt.off_weight, 
                    'amodel_offset': opt.amodel_offset_weight,

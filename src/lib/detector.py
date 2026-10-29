@@ -27,7 +27,7 @@ class Detector(object):
   def __init__(self, opt):
     required = {'hm', 'reg', 'ltrb_amodal', 'tracking', 'reid'}
     if not required.issubset(opt.heads):
-      raise ValueError('GateMOT association requires detection, motion and ReID outputs. Use head_overrides to ablate feature processing while keeping outputs.')
+      raise ValueError('GateMOT association requires the hm, reg, ltrb_amodal, tracking and reid prediction heads.')
     if torch.cuda.is_available() and opt.device != 'cpu':
       opt.device = torch.device('cuda', opt.test_device)
     else:

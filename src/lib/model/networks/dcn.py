@@ -1,10 +1,8 @@
 """Checkpoint-compatible modulated DCN using torchvision's packaged operator.
 
-The parameter names and offset layout follow the vendored DCNv2 module.
-The legacy extension is available explicitly with GATEMOT_DCN_BACKEND=legacy.
+The parameter names and offset layout follow the original DCNv2 implementation.
 """
 import math
-import os
 import torch
 from torch import nn
 from torch.nn.modules.utils import _pair
@@ -35,10 +33,4 @@ class TorchvisionDCN(nn.Module):
                              self.stride,self.padding,self.dilation,mask.sigmoid())
 
 
-backend = os.environ.get('GATEMOT_DCN_BACKEND','torchvision')
-if backend == 'legacy':
-    from dcn_v2 import DCN
-elif backend == 'torchvision':
-    DCN = TorchvisionDCN
-else:
-    raise ValueError('GATEMOT_DCN_BACKEND must be torchvision or legacy')
+DCN = TorchvisionDCN

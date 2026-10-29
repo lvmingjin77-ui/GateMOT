@@ -22,7 +22,6 @@ python src/demo.py \
   --num_head_conv 1 \
   --pre_hm \
   --track_thresh 0.4 \
-  --use_bfl \
   --wh \
   --save_video \
   "$@"

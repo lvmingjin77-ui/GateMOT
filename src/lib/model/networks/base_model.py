@@ -4,8 +4,8 @@ from __future__ import print_function
 
 import torch
 from torch import nn
-from loguru import logger
-from .gating_controls import GatingControl
+
+
 def fill_fc_weights(layers):
     for m in layers.modules():
         if isinstance(m, nn.Conv2d):
@@ -54,18 +54,9 @@ class QAttention(nn.Module):
     return self.conv4(fused)
 
 
-BFL = QAttention 
-             
-
 class BaseModel(nn.Module):
     def __init__(self, heads, head_convs, num_stacks, last_channel, opt=None):
         super(BaseModel, self).__init__()
-        if opt is not None and opt.head_kernel != 3:
-          if opt.local_rank in [-1,0]:
-            logger.info('Using head kernel: {}'.format(opt.head_kernel))
-          head_kernel = opt.head_kernel
-        else:
-          head_kernel = 3
         self.num_stacks = num_stacks# 1
         self.heads = heads#{'hm': 5, 'reg': 2, 'tracking': 2, 'ltrb_amodal': 4, 'reid': 128}
         for head in self.heads:
@@ -74,21 +65,7 @@ class BaseModel(nn.Module):
             if len(head_conv) > 0:
               out = nn.Conv2d(head_conv[-1], classes, 
                     kernel_size=1, stride=1, padding=0, bias=True)# 256 num_classes 1 1
-              kind = opt.head_overrides.get(head, opt.head_type)
-              if kind == 'qattn':
-                conv = QAttention(last_channel, head_conv[0])
-              elif kind in ('glu', 'gated_conv'):
-                conv = GatingControl(last_channel, head_conv[0], 1 if kind == 'glu' else 3)
-              elif kind in ('conv', 'conv_bn'):
-                # Published convolutional baseline: 3x3 conv with bias and no BatchNorm.
-                # conv_bn is the explicit matched-normalization control.
-                conv = nn.Conv2d(last_channel, head_conv[0],
-                                kernel_size=head_kernel,
-                                padding=head_kernel // 2, bias=True)
-                if kind == 'conv_bn':
-                  conv = nn.Sequential(conv, nn.BatchNorm2d(head_conv[0]))
-              else:
-                raise ValueError('Unknown head type {}'.format(kind))
+              conv = QAttention(last_channel, head_conv[0])
               convs = [conv]
               for k in range(1, len(head_conv)):
                   convs.append(nn.Conv2d(head_conv[k - 1], head_conv[k], 
@@ -115,12 +92,7 @@ class BaseModel(nn.Module):
               else:
                 fill_fc_weights(fc)
             else:
-              fc = nn.Conv2d(last_channel, classes, 
-                  kernel_size=1, stride=1, padding=0, bias=True)
-              if 'hm' in head:
-                fc.bias.data.fill_(opt.prior_bias)
-              else:
-                fill_fc_weights(fc)
+              raise ValueError('GateMOT prediction heads require a Q-Attention block')
             self.__setattr__(head, fc)
 
     def img2feats(self, x):

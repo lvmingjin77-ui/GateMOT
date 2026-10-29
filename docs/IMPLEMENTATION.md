@@ -29,7 +29,7 @@ Inference decodes boxes from `ltrb_amodal`, not the auxiliary `wh` head. Default
 
 Current RGB, previous RGB, and previous center heatmap pass through separate stems and are added.
 
-The default modulated DCN uses `torchvision.ops.deform_conv2d`, retaining legacy parameter names, offset/mask projection, and tensor shapes. `GATEMOT_DCN_BACKEND=legacy` selects the separately compiled `DCNv2` module. Building that legacy extension depends on a compatible CUDA toolkit and is not part of the default installation.
+Modulated DCN uses `torchvision.ops.deform_conv2d`, retaining the original parameter names, offset/mask projection, and tensor shapes. No separately compiled DCNv2 extension is needed.
 
 ## Loss and optimization
 
@@ -37,7 +37,7 @@ With the supplied scripts, the loss before the final batch multiplier is
 
 `L = Lhm + Lreg + Ltracking + 0.1 * Lltrb_L1 + 0.1 * Lwh + wReID * LReID + 2 * LSIoU`.
 
-`wReID` is 1.0 except DanceTrack, where it is 0.5. The total loss is multiplied by the **per-process batch size**. The trainable identity classifier belongs to the loss module and is not an inference parameter. Identity count is derived from the selected training JSON.
+`wReID` is 1.0 for all four datasets. The total loss is multiplied by the **per-process batch size**. The trainable identity classifier belongs to the loss module and is not an inference parameter. Identity count is derived from the selected training JSON.
 
 Adam defaults to zero weight decay. LR is multiplied by 0.1 after each listed decay epoch. `--warmup_epochs N` optionally applies epoch-wise linear warmup. Defaults do not enable it. Seeds cover Python, NumPy and PyTorch. Distributed samplers are reseeded each epoch. Resume restores optimizer state but not random-generator states.
 
@@ -47,12 +47,12 @@ Random crop is enabled in the scripts, drawing scale from 0.6, 0.7, …, 1.3. Sh
 
 ## Association
 
-Only `src/lib/tracker_zoo/dctrack.py` is exposed. Identical defaults apply to every decoder control unless explicitly overridden and recorded.
+Online association is implemented in `src/lib/tracker_zoo/dctrack.py`.
 
 | Operation | Implementation default |
 |---|---|
 | Detection threshold | 0.4 |
-| New track threshold | 0.4, or 0.5 for DanceTrack |
+| New track threshold | 0.4 |
 | Motion assignment | IoU cost ≤0.75, equivalent to IoU ≥0.25 |
 | Lost-track appearance assignment | cosine distance ≤0.35, equivalent to similarity ≥0.65 |
 | Appearance geometric gate | IoU cost ≤0.9 |

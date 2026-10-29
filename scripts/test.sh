@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Track a split with the reported Q-Attention model.
+# Track the test split with GateMOT by default.
 # Usage:
 #   DATA_ROOT=/path/to/bee24 LOAD_MODEL=/path/to/model.pth scripts/test.sh bee24
 #   SPLIT=halfval DATA_ROOT=/path/to/bee24 LOAD_MODEL=... scripts/test.sh bee24
@@ -11,7 +11,7 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 export PYTHONPATH="${ROOT}/src:${PYTHONPATH:-}"
-DATASET=${1:?Usage: scripts/test.sh bee24|mot17|mot20|dancetrack|sportsmot}
+DATASET=${1:?Usage: scripts/test.sh bee24|mot17|mot20|sportsmot}
 : "${DATA_ROOT:?Set DATA_ROOT to the dataset root}"
 : "${LOAD_MODEL:?Set LOAD_MODEL to a .pth checkpoint}"
 
@@ -35,9 +35,6 @@ case "$DATASET" in
     ;;
   mot17|mot20)
     K=256; CLS=1
-    ;;
-  dancetrack)
-    K=100; CLS=1; NEW_THRESH=0.5
     ;;
   sportsmot)
     ARCH=dla60
@@ -65,7 +62,6 @@ python src/test.py \
   --num_head_conv 1 \
   --pre_hm \
   --hungarian \
-  --head_type "${HEAD_TYPE:-qattn}" \
   --wh \
   --arch "$ARCH" \
   --custom_dataset_img_path "${DATA_ROOT}/${IMG_SPLIT}" \

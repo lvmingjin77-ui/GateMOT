@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+exp/
+data/
+*.pth
+*.tar
+DCNv2/build/
+DCNv2/dist/
+DCNv2/*.egg-info/
+DCNv2/*.so
+results/
+third_party/TrackEval/

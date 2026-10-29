@@ -1,8 +1,10 @@
 # GateMOT
 
-**Q-Gated Attention for Dense Object Tracking**
-
-[arXiv](https://arxiv.org/abs/2604.26353) · [PDF](https://arxiv.org/pdf/2604.26353)
+> [**GateMOT: Q-Gated Attention for Dense Object Tracking**](https://arxiv.org/abs/2604.26353)
+>
+> Mingjin Lv, Zelin Liu, Feifei Shao, Yi-Ping Phoebe Chen, Junqing Yu, Wei Yang, Zikai Song
+>
+> [arXiv:2604.26353](https://arxiv.org/abs/2604.26353) · [PDF](https://arxiv.org/pdf/2604.26353)
 
 GateMOT brings input- and task-dependent feature selection to dense tracking heads under a tight computation budget. Q-Attention uses Query as a gate on Key and preserves an ungated Value path, separating feature selection from costly global pairwise interactions. The same operator serves detection, motion estimation, and identity embedding.
 

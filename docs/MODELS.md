@@ -68,9 +68,4 @@ Use `SPLIT=val` if you tracked the SportsMOT validation split. Hidden test data 
 
 ## Backbone initialization
 
-For training from ImageNet initialization, download these DLA weights into `pretrain/` without renaming:
-
-| Backbone | Training scripts | Download |
-|---|---|---|
-| DLA-34 | BEE24, MOT17, MOT20 | [dla34-ba72cf86.pth](http://dl.yf.io/dla/models/imagenet/dla34-ba72cf86.pth) |
-| DLA-60 | SportsMOT | [dla60-24839fc4.pth](http://dl.yf.io/dla/models/imagenet/dla60-24839fc4.pth) |
+For training, download the ImageNet pretrained weights from the [DLA Model Zoo](http://dl.yf.io/dla/models/imagenet/) into `pretrain/`, keeping the original filenames.

@@ -92,10 +92,7 @@ git clone https://github.com/JonathonLuiten/TrackEval.git third_party/TrackEval
 git -C third_party/TrackEval checkout 12c8791b303e0a0b50f753af204249e622d0281a
 ```
 
-DCN uses torchvision's implementation. Download the ImageNet initialization weights into `pretrain/`, keeping their filenames:
-
-- **BEE24, MOT17, MOT20** — [dla34-ba72cf86.pth](http://dl.yf.io/dla/models/imagenet/dla34-ba72cf86.pth)
-- **SportsMOT** — [dla60-24839fc4.pth](http://dl.yf.io/dla/models/imagenet/dla60-24839fc4.pth)
+DCN uses torchvision's implementation. For training, download the ImageNet pretrained weights from the [DLA Model Zoo](http://dl.yf.io/dla/models/imagenet/) into `pretrain/`, keeping the original filenames.
 
 ### 2. Prepare data
 

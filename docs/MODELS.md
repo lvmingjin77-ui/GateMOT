@@ -7,11 +7,11 @@ Download the weights from Google Drive and save them in `pretrain/` with the fil
 | BEE24 | `gatemot_bee24.pth` | [Google Drive](https://drive.google.com/file/d/1JoFAW258G3SiDVU27-f2W3zKdSonm916/view?usp=drive_link) |
 | MOT17 | `gatemot_mot17.pth` | [Google Drive](https://drive.google.com/file/d/1BkWeOFmDDr5b6sP5bY_k2elt8OSqb1LH/view?usp=drive_link) |
 | SportsMOT | `gatemot_sportsmot.pth` | [Google Drive](https://drive.google.com/file/d/1I6cLWAVBhptTKjjuuGDeR_OvFdrCZt8E/view?usp=drive_link) |
-| MOT20 | `gatemot_mot20.pth` | [Coming soon](#mot20) |
+| MOT20 | `gatemot_mot20.pth` | [Google Drive](https://drive.google.com/file/d/1HufLPtgFWm9_QShCzFtSZ0LukkQReSxY/view?usp=drive_link) |
 
 ## Run the checkpoints
 
-Complete [installation and data preparation](../README.md#getting-started), then run the block for your dataset from the repository root. Separate ImageNet weights are not needed for inference. These three checkpoints use DLA-34 and passed strict loading and a small-input forward check with the settings below.
+Complete [installation and data preparation](../README.md#getting-started), then run the block for your dataset from the repository root. Separate ImageNet weights are not needed for inference. These checkpoints use DLA-34 and passed strict loading and a forward check with the settings below.
 
 ### BEE24
 
@@ -47,7 +47,14 @@ For official validation, set `SPLIT=val` and choose a fresh output directory.
 
 ### MOT20
 
-A matching DLA checkpoint download will be added here.
+This checkpoint was trained for one epoch on 256 MOT20 training frames for pipeline testing. It passed inference on eight real test frames, but produced no tracks at the default thresholds. It is not a converged benchmark model.
+
+```bash
+export DATASET=mot20 DATA_ROOT=/path/to/MOT20
+export LOAD_MODEL=pretrain/gatemot_mot20.pth
+export TRACKERS_FOLDER=results/mot20_test
+SPLIT=test scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER"
+```
 
 ### Evaluation
 

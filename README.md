@@ -49,14 +49,25 @@ The selected Key features are pooled locally, concatenated with Value, and fused
 
 Test-set results reported in the paper. MOT17 and MOT20 use private detections.
 
-| Dataset | Backbone | HOTA ↑ | MOTA ↑ | IDF1 ↑ | Model |
-|---|---|---:|---:|---:|---|
-| BEE24 | DLA-34 | **48.4** | 67.8 | 64.5 | [Coming soon](docs/MODELS.md#coming-soon) |
-| SportsMOT | DLA-60 | **76.3** | 96.5 | 79.0 | [Coming soon](docs/MODELS.md#coming-soon) |
-| MOT17 | DLA-34 | **63.3** | 78.0 | 77.9 | [Coming soon](docs/MODELS.md#coming-soon) |
-| MOT20 | DLA-34 | **62.8** | 77.6 | 77.3 | [Coming soon](docs/MODELS.md#coming-soon) |
+| Dataset | Backbone | HOTA ↑ | MOTA ↑ | IDF1 ↑ |
+|---|---|---:|---:|---:|
+| BEE24 | DLA-34 | **48.4** | 67.8 | 64.5 |
+| SportsMOT | DLA-60 | **76.3** | 96.5 | 79.0 |
+| MOT17 | DLA-34 | **63.3** | 78.0 | 77.9 |
+| MOT20 | DLA-34 | **62.8** | 77.6 | 77.3 |
 
-GateMOT checkpoints and their matching configurations are coming soon. This release provides the complete main-method pipeline for all four datasets.
+### Checkpoints
+
+Download the available weights from Google Drive and follow the [matching inference commands](docs/MODELS.md#run-the-checkpoints).
+
+| Dataset | Download |
+|---|---|
+| BEE24 | [Google Drive](https://drive.google.com/file/d/1JoFAW258G3SiDVU27-f2W3zKdSonm916/view?usp=drive_link) |
+| MOT17 | [Google Drive](https://drive.google.com/file/d/1BkWeOFmDDr5b6sP5bY_k2elt8OSqb1LH/view?usp=drive_link) |
+| SportsMOT | [Google Drive](https://drive.google.com/file/d/1I6cLWAVBhptTKjjuuGDeR_OvFdrCZt8E/view?usp=drive_link) |
+| MOT20 | [Coming soon](docs/MODELS.md#mot20) |
+
+The three available checkpoints passed strict loading and a forward check. Full benchmark reproduction of these downloads is still being verified.
 
 <a id="getting-started"></a>
 
@@ -141,7 +152,7 @@ ANN_NAME=train NUM_GPUS=2 scripts/train.sh "$DATASET" \
 
 ### 4. Track the test split
 
-Choose a checkpoint and a fresh results directory:
+For a model trained with the commands above, choose its checkpoint and a fresh results directory. For a downloaded checkpoint, use the [matching commands](docs/MODELS.md#run-the-checkpoints).
 
 ```bash
 export LOAD_MODEL=exp/tracking.ctdet/${DATASET}_train_qattn_s317/model_last.pth
@@ -152,7 +163,7 @@ export TRACKERS_FOLDER=results/${DATASET}_test
 SPLIT=test scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER"
 ```
 
-The example uses the last checkpoint for BEE24/MOT17/MOT20. For SportsMOT, it selects the Table 2 checkpoint at epoch 70 of the 80-epoch schedule. Tracking writes one MOT-format `.txt` file per sequence to `TRACKERS_FOLDER`.
+This example uses the last checkpoint for BEE24/MOT17/MOT20 and epoch 70 of the SportsMOT 80-epoch schedule. Use the checkpoint guide for downloaded weights. Tracking writes one MOT-format `.txt` file per sequence to `TRACKERS_FOLDER`.
 
 ### 5. Evaluate
 
@@ -229,7 +240,7 @@ DEMO=/path/to/SEQ/img1 LOAD_MODEL=/path/to/model.pth ARCH=dla34 \
   scripts/demo.sh --exp_id demo_mot17
 ```
 
-Use `ARCH=dla60` for a SportsMOT checkpoint. This example saves the video to `results/demo_mot17_img1.avi` and rendered frames to `results/demo*.jpg`.
+Set `ARCH` and any additional model options according to the [checkpoint guide](docs/MODELS.md#run-the-checkpoints). This example saves the video to `results/demo_mot17_img1.avi` and rendered frames to `results/demo*.jpg`.
 
 </details>
 
@@ -237,6 +248,7 @@ Use `ARCH=dla60` for a SportsMOT checkpoint. This example saves the video to `re
 
 | Topic | Guide |
 |---|---|
+| Checkpoint downloads and matching inference commands | [Checkpoints](docs/MODELS.md) |
 | Data preparation, training, and evaluation | [Data and training](docs/DATA_AND_TRAINING.md) |
 | Q-Attention, losses, and association | [Implementation](docs/IMPLEMENTATION.md) |
 | Train/resume/inference checks | [Software validation](docs/VALIDATION.md) |

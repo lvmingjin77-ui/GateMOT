@@ -47,7 +47,7 @@ SPLIT=test scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER"
 
 Preparation defaults to `train,test` for BEE24/MOT17/MOT20 and `train,val,test` for SportsMOT. To prepare only the full training and test splits, pass `--splits train test`. Training defaults to `ANN_NAME=train`, and inference defaults to `SPLIT=test`. SportsMOT uses official train, without automatically merging val into train.
 
-For SportsMOT Table 2, use `exp/tracking.ctdet/sportsmot_train_qattn_s317/model_70.pth`. The other example paths use `model_last.pth` to demonstrate the workflow. The reported checkpoints and matching configurations are [coming soon](MODELS.md#coming-soon); the examples alone do not establish reproduction of the reported scores.
+These paths refer to models trained with the scripts above. For downloaded weights, use the [checkpoint guide](MODELS.md#run-the-checkpoints), which supplies their matching inference commands.
 
 ## Training settings
 

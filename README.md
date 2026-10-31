@@ -58,7 +58,7 @@ Test-set results reported in the paper. MOT17 and MOT20 use private detections.
 
 ### Checkpoints
 
-Browse the [checkpoint list](docs/MODELS.md) and [request download access](https://drive.google.com/drive/folders/1Pmd2Y_tkax5D5gQQpRpCh0YTwBl27qiD). After approval, download the weights below and follow the [matching inference commands](docs/MODELS.md#run-the-checkpoints).
+Checkpoints are available on [Google Drive](https://drive.google.com/drive/folders/1Pmd2Y_tkax5D5gQQpRpCh0YTwBl27qiD). See the [checkpoint guide](docs/MODELS.md) for filenames and inference commands.
 
 | Dataset | Download |
 |---|---|

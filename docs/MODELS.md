@@ -1,6 +1,6 @@
 # Checkpoints
 
-Sign in with your Google account and [request download access](https://drive.google.com/drive/folders/1Pmd2Y_tkax5D5gQQpRpCh0YTwBl27qiD). After approval, download the weights below and save them in `pretrain/` with the listed filenames. Full benchmark reproduction of these downloads is still being verified.
+Download the checkpoints below to `pretrain/` using the listed filenames. Full benchmark reproduction of these downloads is still being verified.
 
 | Dataset | Filename | Download |
 |---|---|---|

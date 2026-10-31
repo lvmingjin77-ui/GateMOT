@@ -60,7 +60,7 @@ Defaults are in [train.sh](../scripts/train.sh):
 | MOT20 | DLA-34 | 70 | 16 | 0.000115 | 60 |
 | SportsMOT | DLA-60 | 80 | 20 | 0.00012 | 45 |
 
-The supplementary table does not specify MOT20's batch size; the release currently uses 16. `NUM_GPUS` defaults to 1. `GLOBAL_BATCH` must be a positive multiple of it. Batch size changes can affect optimization. Additional flags can follow the dataset argument.
+MOT20 uses a global batch of 16. `NUM_GPUS` defaults to 1. `GLOBAL_BATCH` must be a positive multiple of it. Batch size changes can affect optimization. Additional flags can follow the dataset argument.
 
 Experiment names default to `<dataset>_<training split>_qattn_s<seed>`, with seed 317. Set `EXP_ID` to name a separate run. Checkpoints and `run_config.json` are saved under `exp/tracking.ctdet/<experiment>/`. Numbered checkpoints are saved every five epochs and at the final epoch, alongside `model_last.pth`.
 
@@ -71,7 +71,7 @@ DATA_ROOT=/path/to/MOT17 ANN_NAME=train NUM_GPUS=2 scripts/train.sh mot17 \
   --resume --load_model exp/tracking.ctdet/mot17_train_qattn_s317/model_last.pth
 ```
 
-Resume restores model and optimizer state. [Implementation details](IMPLEMENTATION.md) describe losses, augmentation, association, and known differences from the submitted supplementary description.
+Resume restores model and optimizer state. [Implementation details](IMPLEMENTATION.md) describe losses, augmentation, and association.
 
 ## Optional validation
 
@@ -91,7 +91,7 @@ scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER"
 scripts/eval_hota.sh
 ```
 
-Change `DATASET` and `DATA_ROOT` for BEE24 or MOT20. The first `ceil(N/2)` frames form `halftrain`; the rest form `halfval`, so the middle frame of an odd-length sequence belongs to training. Original frame numbers are retained, and previous-frame inputs stay within the chosen half. Only `train/` is needed. Regenerate existing manifests to apply the current split and sequence-selection rules.
+Change `DATASET` and `DATA_ROOT` for BEE24 or MOT20. The first `ceil(N/2)` frames form `halftrain`; the rest form `halfval`, so the middle frame of an odd-length sequence belongs to training. Original frame numbers are retained, and previous-frame inputs stay within the chosen half. Only `train/` is needed. Regenerate both manifests whenever the source data changes.
 
 SportsMOT already has an official val split. Validate a model trained on its official train split with:
 

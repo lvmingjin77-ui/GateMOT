@@ -11,7 +11,7 @@ Download the checkpoints below to `pretrain/` using the listed filenames. Full b
 
 ## Run the checkpoints
 
-Complete [installation and data preparation](../README.md#getting-started), then run the block for your dataset from the repository root. Separate ImageNet weights are not needed for inference. These checkpoints use DLA-34 and passed strict loading and a forward check with the settings below.
+Complete [installation and data preparation](../README.md#installation), then run the block for your dataset from the repository root. Separate ImageNet weights are not needed for inference. These checkpoints use DLA-34 and passed strict loading and a forward check with the settings below.
 
 ### BEE24
 
@@ -34,6 +34,8 @@ SPLIT=test scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER" \
 ```
 
 ### SportsMOT
+
+The main SportsMOT training and inference scripts default to DLA-60; the DLA-34 override below applies only to this older downloaded checkpoint.
 
 ```bash
 export DATASET=sportsmot DATA_ROOT=/path/to/SportsMOT/dataset

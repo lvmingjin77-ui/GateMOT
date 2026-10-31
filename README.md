@@ -1,15 +1,13 @@
 <div align="center">
 
-# 🚪 GateMOT
-
-### Q-Gated Attention for Dense Object Tracking
+# GateMOT: Q-Gated Attention for Dense Object Tracking
 
 Mingjin Lv<sup>1</sup>, Zelin Liu<sup>1</sup>, Feifei Shao<sup>2</sup>, Yi-Ping Phoebe Chen<sup>3</sup>, Junqing Yu<sup>1</sup>, Wei Yang<sup>1</sup>, Zikai Song<sup>1,✉</sup>
 
 <sup>1</sup>Huazhong University of Science and Technology &nbsp; <sup>2</sup>Zhejiang University &nbsp; <sup>3</sup>La Trobe University
 
 <a href="https://arxiv.org/abs/2604.26353"><img src="https://img.shields.io/badge/arXiv-2604.26353-b31b1b?style=flat-square&logo=arxiv&logoColor=white" alt="arXiv"></a>
-<a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-2f80ed?style=flat-square" alt="License"></a>
+<a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-2f80ed?style=flat-square" alt="License"></a>
 <img src="https://img.shields.io/badge/PyTorch-2.4-ee4c2c?style=flat-square&logo=pytorch&logoColor=white" alt="PyTorch">
 
 <a href="#-tldr">TL;DR</a> ·
@@ -34,7 +32,7 @@ In vanilla attention, Query asks **"who looks like me?"** and pays a quadratic p
   <img src="assets/attention-comparison.png" width="900" alt="Q-Attention uses Gating-Q to select Key features and fuse them with Value, while vanilla attention uses global pairwise matrix multiplications.">
 </p>
 
-| | |
+| Idea | What it does |
 |---|---|
 | 🎯 **A gate for each task** | Detection, motion, and ReID heads learn their own input-dependent feature selection. |
 | 🧵 **A path for detail** | An ungated Value branch complements the selected Key features. |
@@ -65,18 +63,20 @@ The gate selects, local max pooling keeps the strongest nearby response, and Val
 
 Test-set results reported in the paper. MOT17 and MOT20 use private detections.
 
-| Dataset | Backbone | HOTA ↑ | DetA ↑ | AssA ↑ | MOTA ↑ | IDF1 ↑ | Evaluation output |
-|---|---|---:|---:|---:|---:|---:|:---:|
-| 🐝 BEE24 | DLA-34 | **48.4** | – | 44.7 | 67.8 | 64.5 | |
-| ⛹️ SportsMOT | DLA-60 | **76.3** | 88.5 | 65.8 | 96.5 | 79.0 | [scores](SportsMOTEvaluationOutput/scoring_result/scores.txt) · [tracks](SportsMOTEvaluationOutput/SportsMOTResults) |
-| 🚶 MOT17 | DLA-34 | **63.3** | 63.4 | 63.5 | 78.0 | 77.9 | |
-| 👥 MOT20 | DLA-34 | **62.8** | 61.9 | 64.1 | 77.6 | 77.3 | |
+| Dataset | Backbone | HOTA ↑ | AssA ↑ | MOTA ↑ | IDF1 ↑ |
+|---|---|---:|---:|---:|---:|
+| 🐝 BEE24 | DLA-34 | **48.4** | 44.7 | 67.8 | 64.5 |
+| ⛹️ SportsMOT | DLA-60 | **76.3** | 65.8 | 96.5 | 79.0 |
+| 🚶 MOT17 | DLA-34 | **63.3** | 63.5 | 78.0 | 77.9 |
+| 👥 MOT20 | DLA-34 | **62.8** | 64.1 | 77.6 | 77.3 |
+
+The official SportsMOT test evaluation output is included: [scores](SportsMOTEvaluationOutput/scoring_result/scores.txt) and [tracks](SportsMOTEvaluationOutput/SportsMOTResults).
 
 On BEE24-test, GateMOT has the best HOTA, IDF1, and fewest ID switches (1,058) among the methods compared in the paper.
 
 ### ⚖️ Swap the head, keep everything else
 
-Same backbone, losses, and association; only the prediction-head block changes (one-layer heads, DLA-34).
+Paper-reported ablations and profiling statistics with one-layer heads and DLA-34. The backbone, losses, and association are shared; only the prediction-head block changes.
 
 | Head | MOT17-val HOTA ↑ | BEE24-test HOTA ↑ | FPS ↑ | Params (M) |
 |---|---:|---:|---:|---:|
@@ -84,7 +84,7 @@ Same backbone, losses, and association; only the prediction-head block changes (
 | Self-attention | 63.0 | 46.3 | 4.6 | 22.30 |
 | **Q-Attention** | **64.4** | **48.4** | 13.3 | 22.05 |
 
-Q-Attention costs about 0.2M parameters more than Conv and stays close to it in speed, while self-attention slows down sharply. The Conv baseline is included in this release: set `USE_QATTN=0` when training and tracking.
+Q-Attention costs about 0.2M parameters more than Conv and stays close to it in speed, while self-attention slows down sharply. The Conv baseline ships with the code: set `USE_QATTN=0` when training and tracking.
 
 ### 📦 Checkpoints
 
@@ -101,7 +101,7 @@ The checkpoints passed strict loading and a forward check. **MOT20 is a short-tr
 
 ## 🚀 Quick start
 
-Five steps from a clean machine to HOTA. The full guide, including half-split validation, SportsMOT val, and resuming, lives in [Data and training](docs/DATA_AND_TRAINING.md).
+The following workflow supports all four datasets. Run commands from the repository root after installation. Further options are in [Data and training](docs/DATA_AND_TRAINING.md).
 
 <a id="installation"></a>
 
@@ -118,27 +118,29 @@ git clone https://github.com/JonathonLuiten/TrackEval.git third_party/TrackEval
 git -C third_party/TrackEval checkout 12c8791b303e0a0b50f753af204249e622d0281a
 ```
 
-DCN uses torchvision, so nothing extra to compile. For training, put the ImageNet weights from the [DLA Model Zoo](http://dl.yf.io/dla/models/imagenet/) into `pretrain/` with their original filenames.
+DCN uses torchvision, so no separate DCNv2 build is required. For training, put the ImageNet weights from the [DLA Model Zoo](http://dl.yf.io/dla/models/imagenet/) into `pretrain/` with their original filenames.
 
 **2️⃣ Prepare data.** Download a dataset in MOTChallenge layout, then build the annotation files:
 
-| Dataset | `DATASET` | `DATA_ROOT` points to |
+| Dataset | `DATASET` | Example `DATA_ROOT` |
 |---|---|---|
-| [BEE24](https://holmescao.github.io/datasets/BEE24) | `bee24` | the BEE24 folder |
-| [MOT17](https://motchallenge.net/data/MOT17/) | `mot17` | the MOT17 folder |
-| [MOT20](https://motchallenge.net/data/MOT20/) | `mot20` | the MOT20 folder |
-| [SportsMOT](https://github.com/MCG-NJU/SportsMOT) | `sportsmot` | the archive's `dataset/` folder |
+| [BEE24](https://holmescao.github.io/datasets/BEE24) | `bee24` | `/path/to/BEE24` |
+| [MOT17](https://motchallenge.net/data/MOT17/) | `mot17` | `/path/to/MOT17` |
+| [MOT20](https://motchallenge.net/data/MOT20/) | `mot20` | `/path/to/MOT20` |
+| [SportsMOT](https://github.com/MCG-NJU/SportsMOT) | `sportsmot` | `/path/to/SportsMOT/dataset` |
+
+Choose a row above and set both variables. Keep them set for the remaining steps:
 
 ```bash
 export DATASET=mot17 DATA_ROOT=/path/to/MOT17
 scripts/prepare_data.sh "$DATASET"
 ```
 
-This writes `annotations/train.json` and `annotations/test.json` (plus `val.json` for SportsMOT). Images stay in place. MOT17 uses only the `*-FRCNN` copy of each sequence. See the [directory layout](docs/DATA_AND_TRAINING.md#directory-layout).
+This writes `annotations/train.json` and `annotations/test.json` (plus `val.json` for SportsMOT). The root must contain `train/SEQ/img1/`, `train/SEQ/gt/gt.txt`, and `test/SEQ/img1/`; SportsMOT also needs `val/`. Images stay in place. MOT17 uses only the `*-FRCNN` copy of each sequence. See the [directory layout](docs/DATA_AND_TRAINING.md#directory-layout).
 
 <a id="training"></a>
 
-**3️⃣ Train.** The script picks DLA-34 for BEE24/MOT17/MOT20 and DLA-60 for SportsMOT.
+**3️⃣ Train.** Training and tracking both select DLA-60 for SportsMOT and DLA-34 for BEE24/MOT17/MOT20. Set `NUM_GPUS` to the available GPU count (`1` for a single GPU).
 
 ```bash
 ANN_NAME=train NUM_GPUS=2 scripts/train.sh "$DATASET"
@@ -146,7 +148,7 @@ ANN_NAME=train NUM_GPUS=2 scripts/train.sh "$DATASET"
 
 Checkpoints go to `exp/tracking.ctdet/${DATASET}_train_qattn_s317/`. `GLOBAL_BATCH` sets the total batch size and must be divisible by `NUM_GPUS`. Schedules are in [training settings](docs/DATA_AND_TRAINING.md#training-settings).
 
-**4️⃣ Track.** One MOT-format `.txt` per sequence is written to `TRACKERS_FOLDER`.
+**4️⃣ Track.** Choose a checkpoint from the training run and a fresh results directory. One MOT-format `.txt` per sequence is written to `TRACKERS_FOLDER`.
 
 ```bash
 export LOAD_MODEL=exp/tracking.ctdet/${DATASET}_train_qattn_s317/model_last.pth
@@ -156,13 +158,13 @@ SPLIT=test scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER"
 
 For SportsMOT, the paper uses `model_70.pth` from the 80-epoch schedule. For downloaded weights, use the [matching commands](docs/MODELS.md#run-the-checkpoints).
 
-**5️⃣ Evaluate.** Needs GT for the split you tracked:
+**5️⃣ Evaluate.** When test GT is available at `test/SEQ/gt/gt.txt`, keep the variables above and run:
 
 ```bash
 SPLIT=test scripts/eval_hota.sh
 ```
 
-Metrics land in `${TRACKERS_FOLDER}_eval_test/trackers/`. Hidden test splits need the benchmark's evaluation server. See [evaluation details](docs/DATA_AND_TRAINING.md#evaluation).
+Metrics land in `${TRACKERS_FOLDER}_eval_test/trackers/`. Hidden test splits can be tracked without GT; submit their tracking files to the benchmark's evaluation server for scores. See [evaluation details](docs/DATA_AND_TRAINING.md#evaluation).
 
 <details>
 <summary><b>🎬 Bonus: render your own tracking video</b></summary>
@@ -221,7 +223,7 @@ ANN_NAME=train NUM_GPUS=2 scripts/train.sh "$DATASET" \
 
 ## 📜 License
 
-The code is released under the [Apache-2.0 License](LICENSE). Third-party notices are in [NOTICE](NOTICE). Datasets keep their own licenses; please follow the terms of BEE24, MOTChallenge, and SportsMOT.
+The code is released under the [MIT License](LICENSE). Third-party notices are in [NOTICE](NOTICE). Datasets keep their own licenses; please follow the terms of BEE24, MOTChallenge, and SportsMOT.
 
 ## 🙏 Acknowledgements
 

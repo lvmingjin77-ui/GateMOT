@@ -3,6 +3,7 @@
 # Usage:
 #   DATA_ROOT=/path/to/bee24 NUM_GPUS=4 scripts/train.sh bee24
 #   ANN_NAME=halftrain DATA_ROOT=/path/to/bee24 scripts/train.sh bee24
+#   USE_BFL=0 DATA_ROOT=/path/to/bee24 scripts/train.sh bee24
 # Datasets: bee24 mot17 mot20 sportsmot
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
@@ -13,6 +14,7 @@ DATASET=${1:?Usage: scripts/train.sh bee24|mot17|mot20|sportsmot}
 NUM_GPUS=${NUM_GPUS:-1}
 SEED=${SEED:-317}
 shift
+source "$ROOT/scripts/decoder_args.sh"
 
 ARCH=dla34
 FLIP=0.5
@@ -55,10 +57,11 @@ case "$DATASET" in
     ;;
 esac
 
-EXP_ID=${EXP_ID:-${DATASET}_${ANN_NAME:-train}_qattn_s${SEED}}
+EXP_ID=${EXP_ID:-${DATASET}_${ANN_NAME:-train}_${DECODER}_s${SEED}}
 BATCH=${GLOBAL_BATCH:-$BATCH}
 EPOCHS=${NUM_EPOCHS:-$EPOCHS}
 python -m torch.distributed.run --standalone --nproc_per_node="$NUM_GPUS" src/main.py \
+  "${DECODER_ARGS[@]}" \
   --exp_id "$EXP_ID" \
   --same_aug_pre \
   --hm_disturb 0.05 \

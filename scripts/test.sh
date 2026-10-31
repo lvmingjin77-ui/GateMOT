@@ -16,6 +16,7 @@ DATASET=${1:?Usage: scripts/test.sh bee24|mot17|mot20|sportsmot}
 : "${LOAD_MODEL:?Set LOAD_MODEL to a .pth checkpoint}"
 
 shift
+source "$ROOT/scripts/decoder_args.sh"
 ARCH=dla34
 NEW_THRESH=0.4
 MAX_AGE=30
@@ -51,6 +52,7 @@ if [[ "${FUSE:-0}" == "1" ]]; then
 fi
 
 python src/test.py \
+  "${DECODER_ARGS[@]}" \
   --load_model "$LOAD_MODEL" \
   --track_thresh 0.4 \
   --new_thresh "$NEW_THRESH" \

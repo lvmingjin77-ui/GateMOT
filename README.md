@@ -125,7 +125,7 @@ DATA_ROOT=/path/to/MOT20 scripts/prepare_data.sh mot20 --splits train test
 DATA_ROOT=/path/to/SportsMOT/dataset scripts/prepare_data.sh sportsmot --splits train val test
 ```
 
-This creates `annotations/train.json` and `annotations/test.json`, plus `val.json` for SportsMOT. Images stay in place. Test conversion needs only images, not test GT. See [data format details](docs/DATA_AND_TRAINING.md#directory-layout).
+This creates `annotations/train.json` and `annotations/test.json`, plus `val.json` for SportsMOT. MOT17 uses only `*-FRCNN` sequences in every split, skipping DPM and SDP. Images stay in place. Test conversion needs only images, not test GT. See [data format details](docs/DATA_AND_TRAINING.md#directory-layout).
 
 <a id="training"></a>
 
@@ -139,6 +139,8 @@ ANN_NAME=train NUM_GPUS=2 scripts/train.sh "$DATASET"
 ```
 
 The script selects DLA-34 for BEE24/MOT17/MOT20 and DLA-60 for SportsMOT. It saves checkpoints and `run_config.json` under `exp/tracking.ctdet/${DATASET}_train_qattn_s317/`. `NUM_GPUS` sets the GPU count; `GLOBAL_BATCH` sets the total batch size and must be divisible by it. Default schedules are listed in [training settings](docs/DATA_AND_TRAINING.md#training-settings).
+
+The train/test/demo scripts enable Q-Attention (`--use_bfl`) by default. Set `USE_BFL=0` for the Conv baseline in both training and inference; its checkpoints are saved under `${DATASET}_train_conv_s317/`.
 
 If training is interrupted, resume the same run with:
 
@@ -176,7 +178,7 @@ Hidden test splits can be tracked without GT, but their scores require the bench
 
 ### When should train be split in half?
 
-**Use half-splits for development when there is no official validation set:** local validation, hyperparameter or checkpoint selection, and ablation studies. For BEE24, MOT17, and MOT20, the first `floor(N/2)` frames of each training sequence form `halftrain`; the remaining frames form `halfval`. Once settings are fixed, train a separate model on **full train** for the main test experiment. A full-training model evaluated on its own second half is not held-out validation.
+**Use half-splits for development when there is no official validation set:** local validation, hyperparameter or checkpoint selection, and ablation studies. For BEE24, MOT17, and MOT20, the first `ceil(N/2)` frames of each training sequence form `halftrain`; the remaining frames form `halfval`. For odd-length sequences, the middle frame belongs to `halftrain`. Once settings are fixed, train a separate model on **full train** for the main test experiment. A full-training model evaluated on its own second half is not held-out validation.
 
 **SportsMOT already has an official val split**, so use that directly. Neither validation protocol uses test results to choose settings. The main experiments above do not require temporal splitting.
 

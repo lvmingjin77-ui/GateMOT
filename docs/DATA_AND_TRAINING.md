@@ -20,7 +20,7 @@ For SportsMOT, use the downloaded archive's `dataset/` directory. Numeric JPEG f
 
 MOT17/MOT20 GT rows contain `frame,id,x,y,width,height,mark,class,visibility`. BEE24 and SportsMOT are single-class tracking datasets. Test conversion reads images only and does not read test GT.
 
-For MOT17, conversion includes all sequence directories present under each split, including DPM/FRCNN/SDP variants. GateMOT predicts its own detections and does not read `det.txt`. Keep the sequence set consistent across runs.
+For MOT17, conversion includes only `*-FRCNN` sequences in train, test, and both temporal halves. DPM and SDP directories are skipped. GateMOT predicts its own detections and does not read `det.txt`.
 
 ## Main experiments
 
@@ -91,7 +91,7 @@ scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER"
 scripts/eval_hota.sh
 ```
 
-Change `DATASET` and `DATA_ROOT` for BEE24 or MOT20. The first `floor(N/2)` frames form `halftrain`; the rest form `halfval`. Original frame numbers are retained, and previous-frame inputs stay within the chosen half. Only `train/` is needed. Regenerate both manifests together when changing the split policy. `--half-split legacy` preserves the earlier MOT17/MOT20 boundary at `floor(N/2)+1` for older annotations.
+Change `DATASET` and `DATA_ROOT` for BEE24 or MOT20. The first `ceil(N/2)` frames form `halftrain`; the rest form `halfval`, so the middle frame of an odd-length sequence belongs to training. Original frame numbers are retained, and previous-frame inputs stay within the chosen half. Only `train/` is needed. Regenerate existing manifests to apply the current split and sequence-selection rules.
 
 SportsMOT already has an official val split. Validate a model trained on its official train split with:
 

@@ -254,8 +254,13 @@ class GenericDataset(data.Dataset):
          ('iscrowd' in ann and ann['iscrowd'] > 0):
         continue
       bbox = self._coco_box_to_bbox(ann['bbox'])# x1y1wh 2 xyxy
-      bbox[:2] = affine_transform(bbox[:2], trans)
-      bbox[2:] = affine_transform(bbox[2:], trans)
+      # Rotation changes which corners define the axis-aligned bounds.
+      rect = np.array([[bbox[0], bbox[1]], [bbox[0], bbox[3]],
+                       [bbox[2], bbox[3]], [bbox[2], bbox[1]]], dtype=np.float32)
+      for t in range(4):
+        rect[t] = affine_transform(rect[t], trans)
+      bbox[:2] = rect[:, 0].min(), rect[:, 1].min()
+      bbox[2:] = rect[:, 0].max(), rect[:, 1].max()
       bbox[[0, 2]] = np.clip(bbox[[0, 2]], 0, hm_w - 1)
       bbox[[1, 3]] = np.clip(bbox[[1, 3]], 0, hm_h - 1)
       h, w = bbox[3] - bbox[1], bbox[2] - bbox[0]

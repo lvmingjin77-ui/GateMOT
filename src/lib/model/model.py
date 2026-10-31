@@ -20,6 +20,10 @@ def create_model(arch, head, head_conv, opt=None):
   return model
 
 def load_model(model, model_path, opt, optimizer=None):
+  if opt.allow_partial_load and optimizer is None:
+    raise ValueError('Inference requires a complete checkpoint. --allow_partial_load is only for training initialization.')
+  if opt.resume and optimizer is not None and opt.allow_partial_load:
+    raise ValueError('Resume requires a complete, matching checkpoint')
   # Load only checkpoints from trusted sources. Optimizer state uses pickle.
   checkpoint = torch.load(model_path, map_location='cpu')
   source = checkpoint['state_dict']
@@ -43,7 +47,7 @@ def load_model(model, model_path, opt, optimizer=None):
   if mismatched or missing or unexpected:
     message = 'Checkpoint mismatch. Missing={}, unexpected={}, shape mismatches={}'.format(missing,unexpected,mismatched)
     if not opt.allow_partial_load:
-      raise RuntimeError(message + '. Use matching architecture/head settings. Partial loading is for explicit transfer initialization only.')
+      raise RuntimeError(message + '. Match the backbone, heads, and --use_bfl setting (enabled for Q-Attention, omitted for Conv). Partial loading is for explicit training initialization only.')
     lg.warning(message)
     state = {k:v for k,v in state.items() if k in target and k not in mismatched}
   model.load_state_dict(state, strict=not opt.allow_partial_load)

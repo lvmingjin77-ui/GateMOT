@@ -34,10 +34,7 @@ class opts(object):
                              help='path to image/ image folders/ video. '
                                   'or "webcam"')
     self.parser.add_argument('--resume', action='store_true',
-                             help='resume an experiment.'
-                                  'Reloaded the optimizer parameter and '
-                                  'set load_model to model_xx.pth '
-                                  'in the exp dir if load_model is not empty.') 
+                             help='resume model and optimizer state from --load_model')
     self.parser.add_argument('--dataset', default='custom', choices=['custom'],
                              help='MOT-format data loaded from the specified image directory and annotation JSON')
     
@@ -69,6 +66,8 @@ class opts(object):
     self.parser.add_argument('--show_trace', action='store_true')# -----use for vis -- show trajectories
 
     # model sets
+    self.parser.add_argument('--use_bfl', action='store_true',
+                             help='use GateMOT Q-Attention heads; omitted selects the Conv baseline')
     self.parser.add_argument('--load_model', default='',
                              help='path to pretrained model')
     self.parser.add_argument('--arch', default='dla34', 
@@ -82,9 +81,11 @@ class opts(object):
     self.parser.add_argument('--output_dir', default='')
     self.parser.add_argument('--fuse', action='store_true') 
     self.parser.add_argument('--head_conv', type=int, default= 256,
-                             help='hidden channels in each Q-Attention prediction head; '
+                             help='hidden channels in each prediction head; '
                                   '-1 selects the default width.')
     self.parser.add_argument('--num_head_conv', type=int, default=1)
+    self.parser.add_argument('--head_kernel', type=int, default=3,
+                             help='first Conv baseline layer kernel size; Q-Attention uses 1x1 projections')
     self.parser.add_argument('--down_ratio', type=int, default=4,
                              help='output stride. Currently only supports 4.')
     self.parser.add_argument('--not_idaup', action='store_true')# F
@@ -240,6 +241,17 @@ class opts(object):
       opt = self.parser.parse_args()
     else:
       opt = self.parser.parse_args(args)
+
+    if opt.resume and not opt.load_model:
+      self.parser.error('--resume requires --load_model')
+    if opt.resume and opt.allow_partial_load:
+      self.parser.error('--resume requires a complete checkpoint, not --allow_partial_load')
+    if opt.head_kernel < 1 or opt.head_kernel % 2 == 0:
+      self.parser.error('--head_kernel must be a positive odd integer')
+    if opt.num_head_conv < 0 or opt.num_head_conv > 4:
+      self.parser.error('--num_head_conv must be between 0 and 4')
+    if opt.head_conv != -1 and opt.head_conv < 1:
+      self.parser.error('--head_conv must be positive or -1 for the default width')
   
     opt.test_scales = [float(i) for i in opt.test_scales.split(',')]
     opt.save_imgs = [i for i in opt.save_imgs.split(',')] \

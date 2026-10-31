@@ -57,6 +57,7 @@ class QAttention(nn.Module):
 class BaseModel(nn.Module):
     def __init__(self, heads, head_convs, num_stacks, last_channel, opt=None):
         super(BaseModel, self).__init__()
+        head_kernel = opt.head_kernel
         self.num_stacks = num_stacks# 1
         self.heads = heads#{'hm': 5, 'reg': 2, 'tracking': 2, 'ltrb_amodal': 4, 'reid': 128}
         for head in self.heads:
@@ -65,7 +66,12 @@ class BaseModel(nn.Module):
             if len(head_conv) > 0:
               out = nn.Conv2d(head_conv[-1], classes, 
                     kernel_size=1, stride=1, padding=0, bias=True)# 256 num_classes 1 1
-              conv = QAttention(last_channel, head_conv[0])
+              if opt.use_bfl:
+                conv = QAttention(last_channel, head_conv[0])
+              else:
+                conv = nn.Conv2d(last_channel, head_conv[0],
+                                 kernel_size=head_kernel,
+                                 padding=head_kernel // 2, bias=True)
               convs = [conv]
               for k in range(1, len(head_conv)):
                   convs.append(nn.Conv2d(head_conv[k - 1], head_conv[k], 
@@ -92,7 +98,12 @@ class BaseModel(nn.Module):
               else:
                 fill_fc_weights(fc)
             else:
-              raise ValueError('GateMOT prediction heads require a Q-Attention block')
+              fc = nn.Conv2d(last_channel, classes, kernel_size=1,
+                             stride=1, padding=0, bias=True)
+              if 'hm' in head:
+                fc.bias.data.fill_(opt.prior_bias)
+              else:
+                fill_fc_weights(fc)
             self.__setattr__(head, fc)
 
     def img2feats(self, x):

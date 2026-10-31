@@ -8,9 +8,30 @@ import cv2
 import numpy as np
 
 
-def convert(dataset, root, splits=None, half_split='balanced'):
-    if half_split not in ('balanced', 'legacy'):
-        raise ValueError('half_split must be balanced or legacy')
+def _ground_truth_rows(dataset, sequence, frame_ids):
+    gt = sequence / 'gt/gt.txt'
+    if not gt.is_file():
+        raise FileNotFoundError(gt)
+    rows = np.loadtxt(str(gt), delimiter=',', ndmin=2) if gt.stat().st_size else np.empty((0, 9))
+    selected = []
+    for row in rows:
+        if len(row) < 6:
+            raise ValueError('GT rows require frame, ID, x, y, width and height: {}'.format(gt))
+        if int(row[0]) not in frame_ids or row[4] <= 0 or row[5] <= 0:
+            continue
+        if len(row) > 6 and row[6] <= 0:
+            continue
+        if dataset in ('mot17', 'mot20'):
+            if len(row) < 8:
+                raise ValueError('MOT17/20 GT requires class and mark fields')
+            # The custom training loader has one category: marked pedestrians.
+            if int(row[7]) != 1:
+                continue
+        selected.append(row)
+    return selected
+
+
+def convert(dataset, root, splits=None):
     root = Path(root)
     output = root / 'annotations'
     output.mkdir(parents=True, exist_ok=True)
@@ -25,17 +46,16 @@ def convert(dataset, root, splits=None, half_split='balanced'):
         data = dict(images=[], annotations=[], videos=[], categories=[dict(id=1, name='bee' if dataset == 'bee' else 'person')])
         identity_map = {}
         for sequence in sorted(directory.iterdir()):
+            # MOT17's detector variants repeat each video. Use exactly FRCNN.
+            if dataset == 'mot17' and not sequence.name.endswith('-FRCNN'):
+                continue
             image_dir = sequence / 'img1'
             if not image_dir.is_dir():
                 continue
             names = sorted((p for p in image_dir.iterdir() if p.suffix.lower() == '.jpg'), key=lambda p: int(p.stem))
             if not names:
                 continue
-            boundary = len(names) // 2
-            # The default uses the first floor(N/2) frames for every dataset.
-            # Legacy mode preserves the earlier MOT17/MOT20 conversion boundary.
-            if half_split == 'legacy' and dataset in ('mot17', 'mot20'):
-                boundary += 1
+            boundary = (len(names) + 1) // 2
             source_frame_count = len(names)
             if split == 'halftrain':
                 names = names[:boundary]
@@ -43,6 +63,12 @@ def convert(dataset, root, splits=None, half_split='balanced'):
                 names = names[boundary:]
             if not names:
                 continue
+            # Training labels depend only on this split's valid annotations.
+            # source_track_id preserves the original identity across splits.
+            rows = [] if split == 'test' else _ground_truth_rows(
+                dataset, sequence, {int(path.stem) for path in names})
+            for identity in sorted({int(row[1]) for row in rows}):
+                identity_map[(sequence.name, identity)] = len(identity_map) + 1
             video_id = len(data['videos']) + 1
             data['videos'].append(dict(id=video_id, file_name=sequence.name,
                 source_frame_count=source_frame_count, selected_frame_count=len(names),
@@ -64,39 +90,25 @@ def convert(dataset, root, splits=None, half_split='balanced'):
                     next_image_id=image_id+1 if index+1 < len(names) else -1))
             if split == 'test':
                 continue
-            gt = sequence / 'gt/gt.txt'
-            if not gt.is_file():
-                raise FileNotFoundError(gt)
-            rows = np.loadtxt(str(gt), delimiter=',', ndmin=2) if gt.stat().st_size else np.empty((0,9))
             for row in rows:
                 frame, identity = int(row[0]), int(row[1])
-                if frame not in frame_map or len(row) < 6 or row[4] <= 0 or row[5] <= 0:
+                if frame not in frame_map:
                     continue
-                if len(row) > 6 and row[6] <= 0:
-                    continue
-                category = 1
-                if dataset in ('mot17', 'mot20'):
-                    if len(row) < 8:
-                        raise ValueError('MOT17/20 GT requires class and mark fields')
-                    label = int(row[7])
-                    if label in (3,4,5,6,9,10,11):
-                        continue
-                    if label in (2,7,8,12):
-                        category = -1
                 key = (sequence.name, identity)
-                if category == 1 and key not in identity_map:
-                    identity_map[key] = len(identity_map) + 1
                 data['annotations'].append(dict(id=len(data['annotations'])+1,
-                    image_id=frame_map[frame], category_id=category,
-                    track_id=identity_map[key] if category == 1 else -1,
+                    image_id=frame_map[frame], category_id=1,
+                    track_id=identity_map[key],
                     source_track_id=identity, bbox=row[2:6].tolist(),
                     conf=float(row[6]) if len(row)>6 else 1.0,
                     iscrowd=0, area=float(row[4]*row[5])))
         data['conversion'] = dict(dataset=dataset, source_split=source, split=split,
-                                  identity_policy='sequence-and-source-ID',
-                                  half_split_policy=half_split, version=3)
+                                  identity_policy='selected-split-sequence-and-source-ID',
+                                  half_split_policy='ceil', half_train_frames='ceil(N/2)',
+                                  sequence_policy=('name-endswith-FRCNN' if dataset == 'mot17'
+                                                   else 'all-image-sequences'), version=4)
         (output/(split+'.json')).write_text(json.dumps(data))
-        print('{}: {} images, {} annotations, {} identities'.format(split,len(data['images']),len(data['annotations']),len(identity_map)))
+        identities = {ann['track_id'] for ann in data['annotations'] if ann['category_id'] == 1}
+        print('{}: {} images, {} annotations, {} identities'.format(split,len(data['images']),len(data['annotations']),len(identities)))
 
 
 def main(dataset):
@@ -104,10 +116,7 @@ def main(dataset):
     parser.add_argument('--data-root', default=os.environ.get('DATA_ROOT'))
     parser.add_argument('--splits', nargs='+',
                         choices=['train', 'val', 'test', 'halftrain', 'halfval'])
-    parser.add_argument('--half-split', choices=['balanced', 'legacy'], default='balanced',
-                        help='balanced: first floor(N/2) frames for halftrain; '
-                             'legacy: earlier MOT17/MOT20 boundary at floor(N/2)+1')
     args = parser.parse_args()
     if not args.data_root:
         parser.error('Set DATA_ROOT or --data-root')
-    convert(dataset, args.data_root, args.splits, args.half_split)
+    convert(dataset, args.data_root, args.splits)

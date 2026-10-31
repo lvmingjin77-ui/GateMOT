@@ -25,14 +25,14 @@ from tracking_utils.evaluation import Evaluator
 from dataset.datasets.custom_dataset import CustomDataset
 
 
-def fixture(root):
+def fixture(root, frames=4, names=('SEQ_A', 'SEQ_B')):
     for split in ('train','val','test'):
-        for name in ('SEQ_A','SEQ_B'):
+        for name in names:
             seq=root/split/name
             (seq/'img1').mkdir(parents=True)
             (seq/'gt').mkdir()
             rows=[]
-            for frame in range(1,5):
+            for frame in range(1,frames+1):
                 cv2.imwrite(str(seq/'img1'/f'{frame:08d}.jpg'),np.full((64,64,3),120,dtype=np.uint8))
                 for tid in (1,2):
                     rows.append(f'{frame},{tid},{tid*15},15,10,10,1,1,1\n')
@@ -42,7 +42,7 @@ def fixture(root):
 def options(extra=()):
     parser=opts()
     return parser.update_res_info_and_set_heads(parser.parse([
-        '--wh','--pre_hm','--no_pretrained',
+        '--use_bfl','--wh','--pre_hm','--no_pretrained',
         '--input_h','128','--input_w','128']+list(extra)))
 
 
@@ -50,7 +50,8 @@ class ReleaseTests(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory(prefix='gatemot_test_')
         self.root=Path(self.tmp.name)
-        fixture(self.root)
+        self.names=('SEQ_A-FRCNN','SEQ_B-FRCNN')
+        fixture(self.root,names=self.names)
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -82,10 +83,10 @@ class ReleaseTests(unittest.TestCase):
         self.assertFalse({x['file_name'] for x in train['images']} & {x['file_name'] for x in val['images']})
         tracks=self.root/'tracks'
         tracks.mkdir()
-        for name in ('SEQ_A','SEQ_B'):
+        for name in self.names:
             (tracks/(name+'.txt')).write_text((self.root/'train'/name/'gt/gt.txt').read_text())
         prepare(self.root/'train',self.root/'annotations/halfval.json',tracks,self.root/'bundle','bee24')
-        lines=(self.root/'bundle/gt/SEQ_A/gt/gt.txt').read_text().splitlines()
+        lines=(self.root/'bundle/gt'/self.names[0]/'gt/gt.txt').read_text().splitlines()
         self.assertEqual(len(lines),4)
         self.assertEqual({line.split(',')[0] for line in lines},{'1','2'})
 
@@ -113,14 +114,14 @@ class ReleaseTests(unittest.TestCase):
         # Only the training directory is available. SEQ_A is even, SEQ_B is odd.
         shutil.rmtree(self.root/'val')
         shutil.rmtree(self.root/'test')
-        seq=self.root/'train/SEQ_B'
+        seq=self.root/'train'/self.names[1]
         cv2.imwrite(str(seq/'img1/00000005.jpg'),np.full((64,64,3),125,dtype=np.uint8))
         with (seq/'gt/gt.txt').open('a') as handle:
             for tid in (1,2):
                 handle.write(f'5,{tid},{tid*15},15,10,10,1,1,1\n')
         tracks=self.root/'tracks'
         tracks.mkdir()
-        for name in ('SEQ_A','SEQ_B'):
+        for name in self.names:
             (tracks/(name+'.txt')).write_text((self.root/'train'/name/'gt/gt.txt').read_text())
         env=dict(os.environ,DATA_ROOT=str(self.root),
                  PATH=str(Path(sys.executable).parent)+os.pathsep+os.environ.get('PATH',''))
@@ -136,14 +137,15 @@ class ReleaseTests(unittest.TestCase):
                 self.assertEqual(paths['halftrain'] | paths['halfval'],paths['train'])
                 for split,loader_split in (('halftrain','train'),('halfval','val')):
                     item=data[split]
-                    self.assertEqual(item['conversion']['half_split_policy'],'balanced')
+                    self.assertEqual(item['conversion']['half_split_policy'],'ceil')
                     images={im['id']:im for im in item['images']}
                     for video in item['videos']:
                         frames=sorted((im for im in images.values() if im['video_id']==video['id']),
                                       key=lambda im:im['frame_id'])
-                        length=4 if video['file_name']=='SEQ_A' else 5
-                        expected=list(range(1,length//2+1) if split=='halftrain'
-                                      else range(length//2+1,length+1))
+                        length=4 if video['file_name']==self.names[0] else 5
+                        boundary=(length+1)//2
+                        expected=list(range(1,boundary+1) if split=='halftrain'
+                                      else range(boundary+1,length+1))
                         self.assertEqual([im['frame_id'] for im in frames],expected)
                         self.assertEqual(frames[0]['prev_image_id'],-1)
                         self.assertEqual(frames[-1]['next_image_id'],-1)
@@ -166,26 +168,17 @@ class ReleaseTests(unittest.TestCase):
                             self.assertIn(loaded['file_name'],paths[split])
                 output=self.root/('bundle_'+dataset)
                 prepare(self.root/'train',self.root/'annotations/halfval.json',tracks,output,dataset)
-                for name,count in (('SEQ_A',2),('SEQ_B',3)):
+                for name,count in ((self.names[0],2),(self.names[1],2)):
                     gt=(output/'gt'/name/'gt/gt.txt').read_text().splitlines()
                     pred=(output/'trackers'/(name+'.txt')).read_text().splitlines()
                     self.assertEqual(len(gt),2*count)
                     self.assertEqual(gt,pred)
                     self.assertEqual({int(row.split(',')[0]) for row in gt},set(range(1,count+1)))
 
-    def test_legacy_mot_boundary_is_explicit(self):
-        for dataset in ('mot17','mot20'):
-            convert(dataset,self.root,['halftrain','halfval'],half_split='legacy')
-            train=json.loads((self.root/'annotations/halftrain.json').read_text())
-            val=json.loads((self.root/'annotations/halfval.json').read_text())
-            self.assertEqual(train['conversion']['half_split_policy'],'legacy')
-            self.assertEqual({im['frame_id'] for im in train['images']},{1,2,3})
-            self.assertEqual({im['frame_id'] for im in val['images']},{4})
-
     def test_empty_prediction_frames_count_as_misses(self):
         prediction=self.root/'pred.txt'
         prediction.write_text('1,1,15,15,10,10,1,-1,-1,-1\n')
-        evaluator=Evaluator(str(self.root/'train'),'SEQ_A','mot')
+        evaluator=Evaluator(str(self.root/'train'),self.names[0],'mot')
         import motmetrics as mm
         summary=mm.metrics.create().compute(evaluator.eval_file(str(prediction)),metrics=['num_frames','num_misses'])
         self.assertEqual(int(summary.iloc[0]['num_frames']),4)

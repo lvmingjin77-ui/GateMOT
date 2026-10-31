@@ -9,8 +9,10 @@ export PYTHONPATH="${ROOT}/src:${PYTHONPATH:-}"
 : "${DEMO:?Set DEMO to an image directory}"
 : "${LOAD_MODEL:?Set LOAD_MODEL to a .pth checkpoint}"
 ARCH=${ARCH:-dla34}
+source "$ROOT/scripts/decoder_args.sh"
 
 python src/demo.py \
+  "${DECODER_ARGS[@]}" \
   --demo "$DEMO" \
   --load_model "$LOAD_MODEL" \
   --arch "$ARCH" \

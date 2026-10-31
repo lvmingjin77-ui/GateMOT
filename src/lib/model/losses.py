@@ -241,7 +241,9 @@ class SIoU(nn.Module):
 
     ch = torch.max(target_ct[1], pred_ct[1]) - torch.min(target_ct[1], pred_ct[1])
     cw = torch.max(target_ct[0], pred_ct[0]) - torch.min(target_ct[0], pred_ct[0])
-    sigma=torch.pow(cw ** 2 + ch ** 2, 0.5)
+    # vector_norm defines a finite zero gradient when the centers coincide;
+    # sqrt(cw**2 + ch**2) has an infinite derivative at that point.
+    sigma = torch.linalg.vector_norm(torch.stack((cw, ch), dim=1), dim=1)
 
     x1 = torch.abs(cw) / (sigma + 1e-16)
     x2 = torch.abs(ch) / (sigma + 1e-16)

@@ -151,10 +151,11 @@ def fuse_model(model):
       delattr(m.level1, "1")  # remove batchnorm
       m.base_layer[0] = fuse_conv_and_bn(m.base_layer[0], m.base_layer[1])  # update conv
       delattr(m.base_layer, "1")  # remove batchnorm
-      m.pre_img_layer[0] = fuse_conv_and_bn(m.pre_img_layer[0], m.pre_img_layer[1])  # update conv
-      delattr(m.pre_img_layer, "1")  # remove batchnorm
-      m.pre_hm_layer[0] = fuse_conv_and_bn(m.pre_hm_layer[0], m.pre_hm_layer[1])  # update conv
-      delattr(m.pre_hm_layer, "1")  # remove batchnorm
+      for name in ('pre_img_layer', 'pre_hm_layer'):
+        if hasattr(m, name):
+          layer = getattr(m, name)
+          layer[0] = fuse_conv_and_bn(layer[0], layer[1])
+          delattr(layer, "1")
       m.forward = m.fuseforward  # update forward
     elif type(m) is Tree:
       if hasattr(m, "project") and (m.project is not None):

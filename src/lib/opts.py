@@ -66,7 +66,7 @@ class opts(object):
     self.parser.add_argument('--show_trace', action='store_true')# -----use for vis -- show trajectories
 
     # model sets
-    self.parser.add_argument('--use_bfl', action='store_true',
+    self.parser.add_argument('--use_qattn', action='store_true',
                              help='use GateMOT Q-Attention heads; omitted selects the Conv baseline')
     self.parser.add_argument('--load_model', default='',
                              help='path to pretrained model')

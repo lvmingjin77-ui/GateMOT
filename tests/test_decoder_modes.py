@@ -27,12 +27,12 @@ from model.networks.base_model import BaseModel, QAttention
 from model.utils import fuse_model
 
 
-def options(use_bfl=False, arch="dla34", pre_hm=True, extra=()):
+def options(use_qattn=False, arch="dla34", pre_hm=True, extra=()):
     parser = opts()
     argv = ["--arch", arch, "--no_pretrained", "--device", "cpu",
             "--local_rank", "1", "--input_h", "64", "--input_w", "64"]
-    if use_bfl:
-        argv.append("--use_bfl")
+    if use_qattn:
+        argv.append("--use_qattn")
     if pre_hm:
         argv.append("--pre_hm")
     return parser.update_res_info_and_set_heads(parser.parse(argv + list(extra)))
@@ -87,9 +87,9 @@ class DecoderModeTests(unittest.TestCase):
 
     def test_parser_defaults_and_explicit_main_method(self):
         baseline = options()
-        main = options(use_bfl=True)
-        self.assertFalse(baseline.use_bfl)
-        self.assertTrue(main.use_bfl)
+        main = options(use_qattn=True)
+        self.assertFalse(baseline.use_qattn)
+        self.assertTrue(main.use_qattn)
         self.assertEqual(baseline.head_kernel, 3)
         self.assertEqual(baseline.heads, main.heads)
         self.assertEqual(baseline.head_conv, main.head_conv)
@@ -97,15 +97,15 @@ class DecoderModeTests(unittest.TestCase):
         self.assertEqual(set(main.heads), {"hm", "reg", "tracking", "ltrb_amodal", "reid"})
 
     def test_head_kernel_changes_only_the_conv_baseline(self):
-        for use_bfl in (False, True):
-            with self.subTest(use_bfl=use_bfl):
-                model = FeatureModel(options(use_bfl=use_bfl, extra=["--head_kernel", "5"]))
+        for use_qattn in (False, True):
+            with self.subTest(use_qattn=use_qattn):
+                model = FeatureModel(options(use_qattn=use_qattn, extra=["--head_kernel", "5"]))
                 for name in model.heads:
                     head = getattr(model, name)
                     self.assertIsInstance(head[1], nn.ReLU)
                     self.assertIsInstance(head[2], nn.Conv2d)
                     self.assertEqual(head[2].kernel_size, (1, 1))
-                    if use_bfl:
+                    if use_qattn:
                         self.assertIsInstance(head[0], QAttention)
                         for projection in (head[0].conv1, head[0].conv2,
                                            head[0].conv3, head[0].conv4):
@@ -118,7 +118,7 @@ class DecoderModeTests(unittest.TestCase):
                         self.assertFalse(any(isinstance(m, nn.BatchNorm2d) for m in head.modules()))
 
     def test_qattention_preserves_legacy_checkpoint_parameter_names(self):
-        model = FeatureModel(options(use_bfl=True))
+        model = FeatureModel(options(use_qattn=True))
         expected_first_layer = {
             "conv1.weight", "conv2.weight", "conv3.weight", "conv4.weight", "conv4.bias",
             "bn4.weight", "bn4.bias", "bn4.running_mean", "bn4.running_var",
@@ -132,15 +132,15 @@ class DecoderModeTests(unittest.TestCase):
                 self.assertIn(name + ".2.weight", model.state_dict())
                 self.assertIn(name + ".2.bias", model.state_dict())
 
-    def _exercise_model(self, arch, use_bfl, pre_hm, backward):
-        opt = options(use_bfl=use_bfl, arch=arch, pre_hm=pre_hm)
+    def _exercise_model(self, arch, use_qattn, pre_hm, backward):
+        opt = options(use_qattn=use_qattn, arch=arch, pre_hm=pre_hm)
         model = create_model(opt.arch, opt.heads, opt.head_conv, opt)
         input_channels = 64 if arch == "dla34" else 128
         first_layers = []
         for name, channels in opt.heads.items():
             head = getattr(model, name)
             first_layers.append(head[0])
-            if use_bfl:
+            if use_qattn:
                 self.assertIsInstance(head[0], QAttention)
                 self.assertEqual(head[0].conv1.in_channels, input_channels)
             else:
@@ -179,23 +179,23 @@ class DecoderModeTests(unittest.TestCase):
 
     def test_dla34_and_dla60_modes_forward_head_backward_and_fusion(self):
         for arch in ("dla34", "dla60"):
-            for use_bfl in (False, True):
-                with self.subTest(arch=arch, use_bfl=use_bfl):
-                    self._exercise_model(arch, use_bfl, pre_hm=True, backward=True)
+            for use_qattn in (False, True):
+                with self.subTest(arch=arch, use_qattn=use_qattn):
+                    self._exercise_model(arch, use_qattn, pre_hm=True, backward=True)
 
     def test_fusion_with_no_previous_heatmap_stem(self):
-        for use_bfl in (False, True):
-            with self.subTest(use_bfl=use_bfl):
-                self._exercise_model("dla34", use_bfl, pre_hm=False, backward=False)
+        for use_qattn in (False, True):
+            with self.subTest(use_qattn=use_qattn):
+                self._exercise_model("dla34", use_qattn, pre_hm=False, backward=False)
 
     def test_each_mode_strict_checkpoint_round_trip_and_cross_mode_rejection(self):
         features = torch.randn(2, 4, 6, 6)
         with tempfile.TemporaryDirectory(prefix="gatemot_decoder_checkpoint_") as temp:
-            for use_bfl in (False, True):
-                with self.subTest(use_bfl=use_bfl):
-                    opt = options(use_bfl=use_bfl)
+            for use_qattn in (False, True):
+                with self.subTest(use_qattn=use_qattn):
+                    opt = options(use_qattn=use_qattn)
                     source = FeatureModel(opt).eval()
-                    checkpoint = str(Path(temp) / ("qattn.pth" if use_bfl else "conv.pth"))
+                    checkpoint = str(Path(temp) / ("qattn.pth" if use_qattn else "conv.pth"))
                     save_model(checkpoint, 3, source)
                     restored = FeatureModel(opt).eval()
                     load_model(restored, checkpoint, opt)
@@ -203,7 +203,7 @@ class DecoderModeTests(unittest.TestCase):
                     with torch.no_grad():
                         self.assert_outputs_close(source(features), restored(features), rtol=0, atol=0)
 
-                    other_opt = options(use_bfl=not use_bfl)
+                    other_opt = options(use_qattn=not use_qattn)
                     other = FeatureModel(other_opt)
                     before = {name: value.clone() for name, value in other.state_dict().items()}
                     with self.assertRaisesRegex(RuntimeError, "(?i)mismatch"):
@@ -218,16 +218,16 @@ class DecoderModeTests(unittest.TestCase):
     def test_training_resume_restores_matching_mode_and_rejects_partial_or_cross_mode(self):
         features = torch.randn(2, 4, 6, 6)
         with tempfile.TemporaryDirectory(prefix="gatemot_decoder_resume_") as temp:
-            for use_bfl in (False, True):
-                with self.subTest(use_bfl=use_bfl):
-                    opt = options(use_bfl=use_bfl)
+            for use_qattn in (False, True):
+                with self.subTest(use_qattn=use_qattn):
+                    opt = options(use_qattn=use_qattn)
                     source = TrainingModel(opt)
                     optimizer = torch.optim.Adam(source.parameters(), lr=0.002)
                     loss = sum(value.square().mean() for value in source.model(features)[0].values())
                     loss = loss + source.loss(torch.ones(2, 4)).square().mean()
                     loss.backward()
                     optimizer.step()
-                    checkpoint = str(Path(temp) / ("qattn.pth" if use_bfl else "conv.pth"))
+                    checkpoint = str(Path(temp) / ("qattn.pth" if use_qattn else "conv.pth"))
                     save_model(checkpoint, 7, source, optimizer)
 
                     opt.resume = True
@@ -246,12 +246,12 @@ class DecoderModeTests(unittest.TestCase):
 
                     # The production training namespaces must also load into the
                     # inference-only model without bringing the loss classifier.
-                    inference_opt = options(use_bfl=use_bfl)
+                    inference_opt = options(use_qattn=use_qattn)
                     inference = FeatureModel(inference_opt)
                     load_model(inference, checkpoint, inference_opt)
                     self.assert_states_equal(source.model.state_dict(), inference.state_dict())
 
-                    other_opt = options(use_bfl=not use_bfl)
+                    other_opt = options(use_qattn=not use_qattn)
                     other_opt.resume = True
                     other = TrainingModel(other_opt)
                     other_optimizer = torch.optim.Adam(other.parameters())
@@ -285,7 +285,7 @@ class DecoderModeTests(unittest.TestCase):
             shim.chmod(0o755)
             captured = temp / "args.json"
             env = dict(os.environ)
-            for name in ("USE_BFL", "EXP_ID", "ARCH", "ANN_NAME", "SPLIT", "FUSE"):
+            for name in ("USE_QATTN", "EXP_ID", "ARCH", "ANN_NAME", "SPLIT", "FUSE"):
                 env.pop(name, None)
             env.update(PATH=str(temp) + os.pathsep + env.get("PATH", ""),
                        DATA_ROOT=str(temp / "data"), LOAD_MODEL=str(temp / "model.pth"),
@@ -294,12 +294,12 @@ class DecoderModeTests(unittest.TestCase):
             train_ids = {}
             for script in ("train.sh", "test.sh", "demo.sh"):
                 cases = ((None, (), True), ("1", (), True), ("0", (), False),
-                         ("0", ("--use_bfl",), True))
-                for mode, extra, expected_bfl in cases:
-                    with self.subTest(script=script, use_bfl=mode, extra=extra):
+                         ("0", ("--use_qattn",), True))
+                for mode, extra, expected_qattn in cases:
+                    with self.subTest(script=script, use_qattn=mode, extra=extra):
                         run_env = dict(env)
                         if mode is not None:
-                            run_env["USE_BFL"] = mode
+                            run_env["USE_QATTN"] = mode
                         command = ["bash", str(ROOT / "scripts" / script)]
                         if script != "demo.sh":
                             command.append("bee24")
@@ -307,7 +307,7 @@ class DecoderModeTests(unittest.TestCase):
                         subprocess.run(command, cwd=str(ROOT), env=run_env, check=True,
                                        capture_output=True, text=True, timeout=15)
                         argv = json.loads(captured.read_text())
-                        self.assertEqual("--use_bfl" in argv, expected_bfl)
+                        self.assertEqual("--use_qattn" in argv, expected_qattn)
                         if script == "train.sh":
                             experiment = argv[argv.index("--exp_id") + 1]
                             if extra:

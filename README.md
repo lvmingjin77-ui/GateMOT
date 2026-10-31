@@ -140,7 +140,7 @@ ANN_NAME=train NUM_GPUS=2 scripts/train.sh "$DATASET"
 
 The script selects DLA-34 for BEE24/MOT17/MOT20 and DLA-60 for SportsMOT. It saves checkpoints and `run_config.json` under `exp/tracking.ctdet/${DATASET}_train_qattn_s317/`. `NUM_GPUS` sets the GPU count; `GLOBAL_BATCH` sets the total batch size and must be divisible by it. Default schedules are listed in [training settings](docs/DATA_AND_TRAINING.md#training-settings).
 
-The train/test/demo scripts enable Q-Attention (`--use_bfl`) by default. Set `USE_BFL=0` for the Conv baseline in both training and inference; its checkpoints are saved under `${DATASET}_train_conv_s317/`.
+The train/test/demo scripts enable Q-Attention (`--use_qattn`) by default. Set `USE_QATTN=0` for the Conv baseline in both training and inference; its checkpoints are saved under `${DATASET}_train_conv_s317/`.
 
 If training is interrupted, resume the same run with:
 

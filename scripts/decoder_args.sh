@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # Sourced by train/test/demo. Public scripts default to GateMOT.
-# USE_BFL=0 selects the original Conv baseline. An explicit --use_bfl wins.
-USE_BFL=${USE_BFL:-1}
+# USE_QATTN=0 selects the original Conv baseline. An explicit --use_qattn wins.
+USE_QATTN=${USE_QATTN:-1}
 for arg in "$@"; do
-  if [[ "$arg" == --use_bfl ]]; then
-    USE_BFL=1
+  if [[ "$arg" == --use_qattn ]]; then
+    USE_QATTN=1
   fi
 done
 DECODER_ARGS=(--head_kernel 3)
-case "$USE_BFL" in
-  1) DECODER=qattn; DECODER_ARGS+=(--use_bfl) ;;
+case "$USE_QATTN" in
+  1) DECODER=qattn; DECODER_ARGS+=(--use_qattn) ;;
   0) DECODER=conv ;;
-  *) echo "USE_BFL must be 1 (GateMOT) or 0 (Conv)" >&2; exit 2 ;;
+  *) echo "USE_QATTN must be 1 (GateMOT) or 0 (Conv)" >&2; exit 2 ;;
 esac

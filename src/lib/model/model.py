@@ -47,7 +47,7 @@ def load_model(model, model_path, opt, optimizer=None):
   if mismatched or missing or unexpected:
     message = 'Checkpoint mismatch. Missing={}, unexpected={}, shape mismatches={}'.format(missing,unexpected,mismatched)
     if not opt.allow_partial_load:
-      raise RuntimeError(message + '. Match the backbone, heads, and --use_bfl setting (enabled for Q-Attention, omitted for Conv). Partial loading is for explicit training initialization only.')
+      raise RuntimeError(message + '. Match the backbone, heads, and --use_qattn setting (enabled for Q-Attention, omitted for Conv). Partial loading is for explicit training initialization only.')
     lg.warning(message)
     state = {k:v for k,v in state.items() if k in target and k not in mismatched}
   model.load_state_dict(state, strict=not opt.allow_partial_load)

@@ -14,7 +14,7 @@ All projections/fusion are 1×1 convolutions. The pool has stride 1 and padding 
 
 DLA-34 supplies 64 input channels and DLA-60 supplies 128. Both use 256 intermediate channels. `--num_head_conv 1` is the provided configuration. Larger values add 1×1 transforms after the first Q-Attention block, not a stack of independent Q-Attention blocks.
 
-The original `--use_bfl` flag selects Q-Attention. Without it, each head uses a 3×3 Conv → ReLU → 1×1 predictor, with no BatchNorm in the head. `--head_kernel` changes only the first Conv baseline layer. The public train/test/demo scripts enable `--use_bfl` by default; set `USE_BFL=0` for the Conv baseline. Use the same decoder setting for training, resume, and inference. All other task heads, losses, and association settings are shared.
+The `--use_qattn` flag selects Q-Attention. Without it, each head uses a 3×3 Conv → ReLU → 1×1 predictor, with no BatchNorm in the head. `--head_kernel` changes only the first Conv baseline layer. The public train/test/demo scripts enable `--use_qattn` by default; set `USE_QATTN=0` for the Conv baseline. Use the same decoder setting for training, resume, and inference. All other task heads, losses, and association settings are shared.
 
 | Head | Output | Role |
 |---|---:|---|

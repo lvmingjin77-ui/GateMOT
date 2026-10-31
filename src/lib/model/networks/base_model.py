@@ -66,7 +66,7 @@ class BaseModel(nn.Module):
             if len(head_conv) > 0:
               out = nn.Conv2d(head_conv[-1], classes, 
                     kernel_size=1, stride=1, padding=0, bias=True)# 256 num_classes 1 1
-              if opt.use_bfl:
+              if opt.use_qattn:
                 conv = QAttention(last_channel, head_conv[0])
               else:
                 conv = nn.Conv2d(last_channel, head_conv[0],

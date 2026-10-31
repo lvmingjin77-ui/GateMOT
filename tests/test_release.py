@@ -42,7 +42,7 @@ def fixture(root, frames=4, names=('SEQ_A', 'SEQ_B')):
 def options(extra=()):
     parser=opts()
     return parser.update_res_info_and_set_heads(parser.parse([
-        '--use_bfl','--wh','--pre_hm','--no_pretrained',
+        '--use_qattn','--wh','--pre_hm','--no_pretrained',
         '--input_h','128','--input_w','128']+list(extra)))
 
 

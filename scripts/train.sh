@@ -3,7 +3,7 @@
 # Usage:
 #   DATA_ROOT=/path/to/bee24 NUM_GPUS=4 scripts/train.sh bee24
 #   ANN_NAME=halftrain DATA_ROOT=/path/to/bee24 scripts/train.sh bee24
-#   USE_BFL=0 DATA_ROOT=/path/to/bee24 scripts/train.sh bee24
+#   USE_QATTN=0 DATA_ROOT=/path/to/bee24 scripts/train.sh bee24
 # Datasets: bee24 mot17 mot20 sportsmot
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)

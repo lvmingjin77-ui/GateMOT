@@ -58,7 +58,7 @@ def main():
         PATH=str(Path(sys.executable).parent)+os.pathsep+os.environ.get('PATH',''),
         EXP_ID=str(root/'run'), NUM_GPUS='1', GLOBAL_BATCH='2', NUM_EPOCHS='1',
         SEED='317', DATASET=args.dataset, FUSE='0',
-        USE_BFL='1' if args.decoder == 'qattn' else '0')
+        USE_QATTN='1' if args.decoder == 'qattn' else '0')
     # Exercise the public main defaults, regardless of the caller's shell.
     for name in ('ANN_NAME','SPLIT'):
         env.pop(name,None)
@@ -92,7 +92,7 @@ def main():
     assert checkpoint.is_file()
     train_config = json.loads((root/'run/run_config.json').read_text())
     assert train_config['arch'] == expected_arch
-    assert train_config['use_bfl'] == (args.decoder == 'qattn')
+    assert train_config['use_qattn'] == (args.decoder == 'qattn')
     assert Path(train_config['custom_dataset_ann_path']) == root/'annotations'/(train_split+'.json')
     assert Path(train_config['custom_dataset_img_path']) == root/'train'
     run(training + ['--resume', '--load_model', str(checkpoint), '--num_epochs', '2'])
@@ -104,13 +104,13 @@ def main():
     del saved
     resume_config = json.loads((root/'run/run_config_resume_1.json').read_text())
     assert resume_config['arch'] == expected_arch and resume_config['num_epochs'] == 2
-    assert resume_config['use_bfl'] == (args.decoder == 'qattn')
+    assert resume_config['use_qattn'] == (args.decoder == 'qattn')
     assert Path(resume_config['custom_dataset_ann_path']) == root/'annotations'/(train_split+'.json')
     env['LOAD_MODEL'] = str(checkpoint)
     run(['bash', 'scripts/test.sh', args.dataset] + common + ['--output_dir', str(root/'tracks')])
     metadata = json.loads((root/'tracks/evaluation_config.json').read_text())
     assert metadata['arch'] == expected_arch
-    assert metadata['use_bfl'] == (args.decoder == 'qattn')
+    assert metadata['use_qattn'] == (args.decoder == 'qattn')
     assert Path(metadata['custom_dataset_ann_path']) == root/'annotations'/(eval_split+'.json')
     eval_images = 'train' if eval_split == 'halfval' else eval_split
     assert Path(metadata['custom_dataset_img_path']) == root/eval_images

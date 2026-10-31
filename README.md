@@ -250,7 +250,6 @@ Set `ARCH` and any additional model options according to the [checkpoint guide](
 | Checkpoint downloads and matching inference commands | [Checkpoints](docs/MODELS.md) |
 | Data preparation, training, and evaluation | [Data and training](docs/DATA_AND_TRAINING.md) |
 | Q-Attention, losses, and association | [Implementation](docs/IMPLEMENTATION.md) |
-| Train/resume/inference checks | [Software validation](docs/VALIDATION.md) |
 
 ## Acknowledgements
 

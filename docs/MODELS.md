@@ -19,7 +19,7 @@ Complete [installation and data preparation](../README.md#installation), then ru
 export DATASET=bee24 DATA_ROOT=/path/to/BEE24
 export LOAD_MODEL=pretrain/gatemot_bee24.pth
 export TRACKERS_FOLDER=results/bee24_test
-SPLIT=test scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER" \
+SPLIT=test bash scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER" \
   --K 20 --track_thresh 0.2 --pre_thresh 0.5 --new_thresh 0.4 --max_age 60
 ```
 
@@ -29,7 +29,7 @@ SPLIT=test scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER" \
 export DATASET=mot17 DATA_ROOT=/path/to/MOT17
 export LOAD_MODEL=pretrain/gatemot_mot17.pth
 export TRACKERS_FOLDER=results/mot17_test
-SPLIT=test scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER" \
+SPLIT=test bash scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER" \
   --wh_weight 0
 ```
 
@@ -41,7 +41,7 @@ The main SportsMOT training and inference scripts default to DLA-60; the DLA-34 
 export DATASET=sportsmot DATA_ROOT=/path/to/SportsMOT/dataset
 export LOAD_MODEL=pretrain/gatemot_sportsmot.pth
 export TRACKERS_FOLDER=results/sportsmot_test
-SPLIT=test scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER" \
+SPLIT=test bash scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER" \
   --arch dla34
 ```
 
@@ -55,7 +55,7 @@ This checkpoint was trained for one epoch on 256 MOT20 training frames for pipel
 export DATASET=mot20 DATA_ROOT=/path/to/MOT20
 export LOAD_MODEL=pretrain/gatemot_mot20.pth
 export TRACKERS_FOLDER=results/mot20_test
-SPLIT=test scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER"
+SPLIT=test bash scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER"
 ```
 
 ### Evaluation
@@ -63,7 +63,7 @@ SPLIT=test scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER"
 When GT is available, keep `DATASET`, `DATA_ROOT`, and `TRACKERS_FOLDER` from the corresponding block and run:
 
 ```bash
-SPLIT=test scripts/eval_hota.sh
+SPLIT=test bash scripts/eval_hota.sh
 ```
 
 Use `SPLIT=val` if you tracked the SportsMOT validation split. Hidden test data supports inference without GT, but local metrics require its annotations. Use fresh result and evaluation directories for each run.

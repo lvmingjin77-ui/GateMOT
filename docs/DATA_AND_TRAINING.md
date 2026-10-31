@@ -37,12 +37,12 @@ Then run the shared workflow:
 
 ```bash
 export DATASET=mot17 DATA_ROOT=/path/to/MOT17
-scripts/prepare_data.sh "$DATASET"
-ANN_NAME=train NUM_GPUS=2 scripts/train.sh "$DATASET"
+bash scripts/prepare_data.sh "$DATASET"
+ANN_NAME=train NUM_GPUS=2 bash scripts/train.sh "$DATASET"
 
 export LOAD_MODEL=exp/tracking.ctdet/${DATASET}_train_qattn_s317/model_last.pth
 export TRACKERS_FOLDER=results/${DATASET}_test
-SPLIT=test scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER"
+SPLIT=test bash scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER"
 ```
 
 Preparation defaults to `train,test` for BEE24/MOT17/MOT20 and `train,val,test` for SportsMOT. To prepare only the full training and test splits, pass `--splits train test`. Training defaults to `ANN_NAME=train`, and inference defaults to `SPLIT=test`. SportsMOT uses official train, without automatically merging val into train.
@@ -67,7 +67,7 @@ Experiment names default to `<dataset>_<training split>_qattn_s<seed>`, with see
 Resume the same experiment with:
 
 ```bash
-DATA_ROOT=/path/to/MOT17 ANN_NAME=train NUM_GPUS=2 scripts/train.sh mot17 \
+DATA_ROOT=/path/to/MOT17 ANN_NAME=train NUM_GPUS=2 bash scripts/train.sh mot17 \
   --resume --load_model exp/tracking.ctdet/mot17_train_qattn_s317/model_last.pth
 ```
 
@@ -81,14 +81,14 @@ This optional protocol is available for BEE24, MOT17, and MOT20. Full-training m
 
 ```bash
 export DATASET=mot17 DATA_ROOT=/path/to/MOT17
-scripts/prepare_data.sh "$DATASET" --splits halftrain halfval
-ANN_NAME=halftrain NUM_GPUS=2 scripts/train.sh "$DATASET"
+bash scripts/prepare_data.sh "$DATASET" --splits halftrain halfval
+ANN_NAME=halftrain NUM_GPUS=2 bash scripts/train.sh "$DATASET"
 
 export SPLIT=halfval
 export LOAD_MODEL=exp/tracking.ctdet/${DATASET}_halftrain_qattn_s317/model_last.pth
 export TRACKERS_FOLDER=results/${DATASET}_halfval
-scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER"
-scripts/eval_hota.sh
+bash scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER"
+bash scripts/eval_hota.sh
 ```
 
 Change `DATASET` and `DATA_ROOT` for BEE24 or MOT20. The first `ceil(N/2)` frames form `halftrain`; the rest form `halfval`, so the middle frame of an odd-length sequence belongs to training. Original frame numbers are retained, and previous-frame inputs stay within the chosen half. Only `train/` is needed. Regenerate both manifests whenever the source data changes.
@@ -97,14 +97,14 @@ SportsMOT already has an official val split. Validate a model trained on its off
 
 ```bash
 export DATASET=sportsmot DATA_ROOT=/path/to/SportsMOT/dataset
-scripts/prepare_data.sh "$DATASET" --splits train val
-ANN_NAME=train NUM_GPUS=2 scripts/train.sh "$DATASET"
+bash scripts/prepare_data.sh "$DATASET" --splits train val
+ANN_NAME=train NUM_GPUS=2 bash scripts/train.sh "$DATASET"
 
 export SPLIT=val
 export LOAD_MODEL=exp/tracking.ctdet/sportsmot_train_qattn_s317/model_70.pth
 export TRACKERS_FOLDER=results/sportsmot_val
-scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER"
-scripts/eval_hota.sh
+bash scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER"
+bash scripts/eval_hota.sh
 ```
 
 Evaluate candidate checkpoints on validation data when selecting settings for a new experiment. Do not use test scores to select epochs or parameters. A full-training model evaluated on its own training half is not a held-out validation result.
@@ -115,7 +115,7 @@ Install the pinned TrackEval version from the [README](../README.md#installation
 
 ```bash
 DATASET=bee24 SPLIT=test DATA_ROOT=/path/to/BEE24 \
-TRACKERS_FOLDER=results/bee24_test scripts/eval_hota.sh
+TRACKERS_FOLDER=results/bee24_test bash scripts/eval_hota.sh
 ```
 
 `TRACKERS_FOLDER` must match the tracking command's `--output_dir`. The wrapper evaluates exactly the frames in the selected JSON, consistently renumbering copied GT and predictions in a separate evaluation directory. Empty prediction frames still count. Original GT and results are unchanged.

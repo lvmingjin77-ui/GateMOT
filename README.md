@@ -136,18 +136,18 @@ The dataset root must contain `train/SEQ/img1/`, `train/SEQ/gt/gt.txt`, and `tes
 export DATASET=bee24 DATA_ROOT=/path/to/BEE24
 
 # Prepare data
-scripts/prepare_data.sh bee24 --splits train test
+bash scripts/prepare_data.sh bee24 --splits train test
 
 # Train
-ANN_NAME=train NUM_GPUS=1 scripts/train.sh bee24
+ANN_NAME=train NUM_GPUS=1 bash scripts/train.sh bee24
 
 # Track the test split
 LOAD_MODEL=exp/tracking.ctdet/bee24_train_qattn_s317/model_last.pth \
-  SPLIT=test scripts/test.sh bee24 --output_dir results/bee24_test
+  SPLIT=test bash scripts/test.sh bee24 --output_dir results/bee24_test
 
 # Evaluate locally when test GT is available
 DATASET=bee24 SPLIT=test TRACKERS_FOLDER=results/bee24_test \
-  scripts/eval_hota.sh
+  bash scripts/eval_hota.sh
 ```
 
 #### [MOT17](https://motchallenge.net/data/MOT17/) · DLA-34
@@ -158,18 +158,18 @@ Only `*-FRCNN` sequences are used; DPM and SDP copies are skipped.
 export DATASET=mot17 DATA_ROOT=/path/to/MOT17
 
 # Prepare data
-scripts/prepare_data.sh mot17 --splits train test
+bash scripts/prepare_data.sh mot17 --splits train test
 
 # Train
-ANN_NAME=train NUM_GPUS=1 scripts/train.sh mot17
+ANN_NAME=train NUM_GPUS=1 bash scripts/train.sh mot17
 
 # Track the test split
 LOAD_MODEL=exp/tracking.ctdet/mot17_train_qattn_s317/model_last.pth \
-  SPLIT=test scripts/test.sh mot17 --output_dir results/mot17_test
+  SPLIT=test bash scripts/test.sh mot17 --output_dir results/mot17_test
 
 # Evaluate locally when test GT is available
 DATASET=mot17 SPLIT=test TRACKERS_FOLDER=results/mot17_test \
-  scripts/eval_hota.sh
+  bash scripts/eval_hota.sh
 ```
 
 #### [MOT20](https://motchallenge.net/data/MOT20/) · DLA-34
@@ -178,18 +178,18 @@ DATASET=mot17 SPLIT=test TRACKERS_FOLDER=results/mot17_test \
 export DATASET=mot20 DATA_ROOT=/path/to/MOT20
 
 # Prepare data
-scripts/prepare_data.sh mot20 --splits train test
+bash scripts/prepare_data.sh mot20 --splits train test
 
 # Train
-ANN_NAME=train NUM_GPUS=1 scripts/train.sh mot20
+ANN_NAME=train NUM_GPUS=1 bash scripts/train.sh mot20
 
 # Track the test split
 LOAD_MODEL=exp/tracking.ctdet/mot20_train_qattn_s317/model_last.pth \
-  SPLIT=test scripts/test.sh mot20 --output_dir results/mot20_test
+  SPLIT=test bash scripts/test.sh mot20 --output_dir results/mot20_test
 
 # Evaluate locally when test GT is available
 DATASET=mot20 SPLIT=test TRACKERS_FOLDER=results/mot20_test \
-  scripts/eval_hota.sh
+  bash scripts/eval_hota.sh
 ```
 
 #### [SportsMOT](https://github.com/MCG-NJU/SportsMOT) · DLA-60
@@ -198,18 +198,18 @@ DATASET=mot20 SPLIT=test TRACKERS_FOLDER=results/mot20_test \
 export DATASET=sportsmot DATA_ROOT=/path/to/SportsMOT/dataset
 
 # Prepare data
-scripts/prepare_data.sh sportsmot --splits train val test
+bash scripts/prepare_data.sh sportsmot --splits train val test
 
 # Train
-ANN_NAME=train NUM_GPUS=1 scripts/train.sh sportsmot
+ANN_NAME=train NUM_GPUS=1 bash scripts/train.sh sportsmot
 
 # Track the test split
 LOAD_MODEL=exp/tracking.ctdet/sportsmot_train_qattn_s317/model_last.pth \
-  SPLIT=test scripts/test.sh sportsmot --output_dir results/sportsmot_test
+  SPLIT=test bash scripts/test.sh sportsmot --output_dir results/sportsmot_test
 
 # Evaluate locally when test GT is available
 DATASET=sportsmot SPLIT=test TRACKERS_FOLDER=results/sportsmot_test \
-  scripts/eval_hota.sh
+  bash scripts/eval_hota.sh
 ```
 
 Tracking results are saved in `results/<dataset>_test/` and metrics in `results/<dataset>_test_eval_test/trackers/`. Use a fresh results directory for each run.
@@ -221,7 +221,7 @@ For downloaded checkpoints, use the [matching inference commands](docs/MODELS.md
 
 ```bash
 DEMO=/path/to/SEQ/img1 LOAD_MODEL=/path/to/model.pth ARCH=dla34 \
-  scripts/demo.sh --exp_id demo_mot17
+  bash scripts/demo.sh --exp_id demo_mot17
 ```
 
 The video is saved to `results/demo_mot17_img1.avi` and frames to `results/demo*.jpg`. Match `ARCH` and other options to the [checkpoint guide](docs/MODELS.md#run-the-checkpoints).
@@ -235,7 +235,7 @@ The video is saved to `results/demo_mot17_img1.avi` and frames to `results/demo*
 <details>
 <summary><b>How do I run the Conv baseline?</b></summary>
 
-Add `USE_QATTN=0` to both training and tracking, for example `USE_QATTN=0 ANN_NAME=train scripts/train.sh mot17`. Conv runs are saved under `${DATASET}_train_conv_s317/`. Use the same setting for training, resume, and inference.
+Add `USE_QATTN=0` to both training and tracking, for example `USE_QATTN=0 ANN_NAME=train bash scripts/train.sh mot17`. Conv runs are saved under `${DATASET}_train_conv_s317/`. Use the same setting for training, resume, and inference.
 
 </details>
 
@@ -257,7 +257,7 @@ MOT17 ships each video three times (DPM, FRCNN, SDP) with identical images and G
 <summary><b>Training was interrupted. How do I resume?</b></summary>
 
 ```bash
-ANN_NAME=train NUM_GPUS=1 scripts/train.sh "$DATASET" \
+ANN_NAME=train NUM_GPUS=1 bash scripts/train.sh "$DATASET" \
   --resume --load_model "exp/tracking.ctdet/${DATASET}_train_qattn_s317/model_last.pth"
 ```
 

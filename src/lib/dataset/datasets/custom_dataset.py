@@ -13,8 +13,6 @@ class CustomDataset(GenericDataset):
   max_objs = 0
   cat_ids = {1: 1}
   def __init__(self, opt, split):
-    # import pdb
-    # pdb.set_trace()
     self.max_objs = opt.K
     img_dir = opt.custom_dataset_img_path
     ann_path = opt.custom_dataset_ann_path
@@ -33,8 +31,6 @@ class CustomDataset(GenericDataset):
     return self.num_samples
 
   def save_results(self, results, save_dir):
-    # import pdb
-    # pdb.set_trace()
     results_dir = os.path.join(save_dir, 'results_mot')
     if not os.path.exists(results_dir):
       os.mkdir(results_dir)
@@ -68,7 +64,5 @@ class CustomDataset(GenericDataset):
       f.close()
 
   def run_eval(self, results, save_dir):
-    # import pdb
-    # pdb.set_trace()
     self.save_results(results, save_dir)
     

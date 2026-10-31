@@ -133,10 +133,8 @@ class Trainer(object):
     # model to device
     self.model_with_loss = model_w_l.to(opt.device)
     
-    # import pdb;pdb.set_trace()
     # for i,(k,v) in enumerate(self.model_with_loss.named_parameters()):
     #   print(f'{i}-{k}')
-    # import pdb;pdb.set_trace()
     
     # Build optimizer
     self.optimizer = self.get_optimizer()#  optimizer with loss parameter

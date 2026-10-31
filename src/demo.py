@@ -76,8 +76,6 @@ def demo(opt):
       
       # esc to quit and finish saving video
       if cnt == len(image_names):
-        # import pdb
-        # pdb.set_trace()
         save_and_exit(opt, out, results, out_name)
         break
 

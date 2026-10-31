@@ -61,7 +61,6 @@ class Detector(object):
 
   def run(self, image_or_path_or_tensor, meta={}):
     '''start tracking '''
-    # 检查是否是预处理过的数据（字典格式）
     is_dict_input = isinstance(image_or_path_or_tensor, dict)
     
     # init debugger
@@ -69,12 +68,12 @@ class Detector(object):
       self.debugger.clear()
     
     if is_dict_input:
-      # 测试模式：传入的是预处理过的字典
+      # Use images and metadata from a preprocessed batch.
       image = image_or_path_or_tensor['image'][0].numpy()
       pre_processed_images = image_or_path_or_tensor
       pre_processed = True
     else:
-      # demo模式：传入的是原始图像路径或图像数组
+      # Preprocess a raw image path or array below.
       image = image_or_path_or_tensor
       pre_processed = False
     
@@ -115,8 +114,7 @@ class Detector(object):
         images, self.pre_images, pre_hms, pre_inds)# output, dets
         # dets :{'scores': 'clses':  'xs':  'ys': 'cts': 'ct_acc': 'bboxes_amodal': 'bboxes'
         #       'tracking':  'pre_cts':   'reid_feature':   }
-      '''run post_process: 将所有输出尺寸下的 目标信息 转换为 输入尺寸下的目标信息'''
-      # back to the input image coordinate system
+      # Map decoded detections to the original image coordinates.
       result = self.post_process(dets, meta, scale)
       #result =  [{'score':
       #            'class':
@@ -140,7 +138,7 @@ class Detector(object):
           self.debugger, images, result, output, scale, 
           pre_images=self.pre_images,
           pre_hms=pre_hms)
-        #self.debugger.imgs['predict_hm']、 self.debugger.imgs['pre_img']、self.debugger.imgs['pre_hm']
+        #self.debugger.imgs['predict_hm'], self.debugger.imgs['pre_img'],self.debugger.imgs['pre_hm']
         #used for visualizing 
 
     ''' run tracking '''
@@ -227,9 +225,7 @@ class Detector(object):
 
 
   def _trans_bbox(self, bbox, trans, width, height):
-    '''
-    将上一帧 符合置信度要求的 跟踪的目标框坐标 变换为 输入尺寸下的框坐标
-    '''
+    '''Transform and clip a box to the specified image resolution.'''
     bbox = np.array(copy.deepcopy(bbox), dtype=np.float32)
     bbox[:2] = affine_transform(bbox[:2], trans)
     bbox[2:] = affine_transform(bbox[2:], trans)
@@ -345,13 +341,6 @@ class Detector(object):
   def show_results(self, debugger, image, results):
     #current frame (original image)  tracking results of current frame
     debugger.add_img(image, img_id='generic')
-    # import pdb 
-    # pdb.set_trace()
-    # 注释掉保存previous图像，只保存检测后的图像
-    # if self.opt.tracking:
-    #   debugger.add_img(self.pre_image_ori if self.pre_image_ori is not None else image, 
-    #     img_id='previous')
-    #   self.pre_image_ori = image
     
     for item in results:
       score = item.track_id if self.opt.show_track_color or self.opt.demo else item.score

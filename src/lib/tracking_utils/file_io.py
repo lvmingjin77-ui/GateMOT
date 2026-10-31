@@ -67,36 +67,32 @@ def read_mot_results(filename, is_gt, is_ignore):
     if os.path.isfile(filename):
         with open(filename, 'r') as f:
             for line in f.readlines():
-                # 自动检测分隔符：先尝试逗号（MOT格式），再尝试空格（CrowdTrack格式）
+                # Accept comma-delimited MOT or space-delimited CrowdTrack rows.
                 if ',' in line:
                     linelist = line.split(',')
                 else:
                     linelist = line.split()
                 
-                # CrowdTrack格式只有6个字段：frame_id, obj_id, x, y, w, h
-                # MOT格式有10个字段：frame_id, obj_id, x, y, w, h, conf, class, visibility, ...
                 if len(linelist) < 6:
                     continue
                 
                 fid = int(linelist[0])
-                # CrowdTrack的frame_id从0开始，需要+1转换为MOT标准（从1开始）
-                # MOT格式已经从1开始，不需要转换
-                if ',' not in line:  # 空格分隔 = CrowdTrack格式
+                # Convert CrowdTrack's zero-based frame IDs to MOT's one-based IDs.
+                if ',' not in line:
                     fid = fid + 1  # 0->1, 1->2, 2->3, ...
-                else:  # 逗号分隔 = MOT格式
+                else:
                     if fid < 1:
                         continue
                 
                 results_dict.setdefault(fid, list())
                 
                 if is_gt:
-                    # 检查是否是完整的MOT格式（有class和mark字段）
+                    # Filter MOTChallenge ground truth by class and mark.
                     if len(linelist) >= 8 and any(tag in filename for tag in ('MOT16-', 'MOT17-', 'MOT20-')):
                         label = int(float(linelist[7]))
                         mark = int(float(linelist[6]))
                         if mark == 0 or label not in valid_labels:
                             continue
-                    # CrowdTrack格式：所有目标都有效
                     score = 1
                 elif is_ignore:
                     if len(linelist) >= 8 and any(tag in filename for tag in ('MOT16-', 'MOT17-', 'MOT20-')):
@@ -107,7 +103,7 @@ def read_mot_results(filename, is_gt, is_ignore):
                         continue
                     score = 1
                 else:
-                    # 对于tracking结果，如果有conf字段则使用，否则默认为1
+                    # Use the prediction confidence when provided.
                     if len(linelist) >= 7:
                         score = float(linelist[6])
                     else:

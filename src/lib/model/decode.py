@@ -82,7 +82,7 @@ def _update_kps_with_hm(
     return kps, kps
 
 def generic_decode(output, K=100, opt=None):
-  #[{'hm':(b,1,h/4,w/4),'reg':(b,2,h/4,w/4),'ltrb_amodal':(b,4,h/4,w/4),'tracking':(b,2,h/4,w/4)，‘pre_inds’:}]
+  #[{'hm':(b,1,h/4,w/4),'reg':(b,2,h/4,w/4),'ltrb_amodal':(b,4,h/4,w/4),'tracking':(b,2,h/4,w/4),'pre_inds':}]
   # K 200 ,  opt
   heat = output['hm']
   batch, cat, height, width = heat.size()
@@ -100,9 +100,8 @@ def generic_decode(output, K=100, opt=None):
          'xs': xs0, 'ys': ys0, 'cts': cts}
   
   if 'reg' in output:#T
-    reg = output['reg'] #  b，2，h/4，w/4 --- d_x， d_y
+    reg = output['reg'] #  b,2,h/4,w/4 --- d_x, d_y
     reg = _tranpose_and_gather_feat(reg, inds)
-    #网络输出的回归预测 b,2,h/4,w/4---d_x,d_y  bz,100  --- b 100 2 
     reg = reg.view(batch, K, 2)# b,100,2
     xs = xs0.view(batch, K, 1) + reg[:, :, 0:1]
     ys = ys0.view(batch, K, 1) + reg[:, :, 1:2]
@@ -116,7 +115,7 @@ def generic_decode(output, K=100, opt=None):
     wh = _tranpose_and_gather_feat(wh, inds)
     wh = wh.view(batch, K, 2)
     wh[wh < 0] = 0
-    # 使用精修后的中心点 xs, ys（与CenterTrack一致）
+    # Decode width and height around the refined centers.
     bboxes = torch.cat([xs - wh[..., 0:1] / 2, 
                         ys - wh[..., 1:2] / 2,
                         xs + wh[..., 0:1] / 2, 

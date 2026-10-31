@@ -11,10 +11,10 @@ class Debugger(object):
   def __init__(self, opt, dataset):
     self.opt = opt
     self.imgs = {}
-    self.theme = opt.debugger_theme# ‘white’
+    self.theme = opt.debugger_theme# 'white'
     self.plt = plt
     self.with_3d = False
-    self.names = dataset.class_name#‘’
+    self.names = dataset.class_name#''
     self.out_size = 384 if opt.dataset == 'kitti' else 512 #512
     self.cnt = 0
     colors = [(color_list[i]).astype(np.uint8) for i in range(len(color_list))]
@@ -164,9 +164,9 @@ class Debugger(object):
       txt = '{}{}'.format(self.names[cat], ID)
     else:
       txt = '{}{:.1f}'.format(self.names[cat], conf)
-    thickness = 5  # 检测框宽度（更粗）
-    fontsize = 0.8  # ID字体大小（更大）
-    font_thickness = 3  # ID字体粗细（加粗）
+    thickness = 5
+    fontsize = 0.8
+    font_thickness = 3
     if not self.opt.not_show_bbox:
       font = cv2.FONT_HERSHEY_SIMPLEX
       cat_size = cv2.getTextSize(txt, font, fontsize, font_thickness)[0]

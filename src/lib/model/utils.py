@@ -20,8 +20,8 @@ def _gather_feat(feat, ind):
   return feat 
 # torch.gather(src, dim= , index= )
 def _tranpose_and_gather_feat(feat, ind):
-  feat = feat.permute(0, 2, 3, 1).contiguous()# b，h/4，w/4，2
-  feat = feat.view(feat.size(0), -1, feat.size(3))# b， s， 2
+  feat = feat.permute(0, 2, 3, 1).contiguous()# b,h/4,w/4,2
+  feat = feat.view(feat.size(0), -1, feat.size(3))# b, s, 2
   feat = _gather_feat(feat, ind)
   return feat
 
@@ -73,7 +73,7 @@ def _topk(scores, K=100):
     
   topk_scores, topk_inds = torch.topk(scores.view(batch, cat, -1), K)
   #  b c 100
-  topk_inds = topk_inds % (height * width)# 对所有（100个） 
+  topk_inds = topk_inds % (height * width)
   topk_ys   = (topk_inds / width).int().float()
   topk_xs   = (topk_inds % width).int().float() 
     

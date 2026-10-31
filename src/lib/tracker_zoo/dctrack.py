@@ -201,7 +201,7 @@ class Tracker(object):
     """ Step 4: Init new stracks of current frame """
     for inew in u_det:
       track = dets[inew]
-      if track.score < self.opt.new_thresh: # 0.65 ｜ 0.8
+      if track.score < self.opt.new_thresh: # 0.65 | 0.8
         continue
       track.activate(self.frame_id)
       activated_starcks.append(track)

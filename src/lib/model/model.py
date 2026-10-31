@@ -14,7 +14,7 @@ _network_factory = {
 
 def create_model(arch, head, head_conv, opt=None):
   num_layers = int(arch[3:5]) # dla34 dla46x_c
-  arch = arch[:3] # ‘dla’
+  arch = arch[:3] # 'dla'
   model_class = _network_factory[arch]# model_class == DLASeg
   model = model_class(num_layers, heads=head, head_convs=head_conv, opt=opt)
   return model

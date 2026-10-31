@@ -165,7 +165,7 @@ class Trainer(object):
       assert 0, self.opt.optim
     return optimizer
 
-  def run_epoch(self, epoch, data_loader):# 输入‘train’  eps  train_loader
+  def run_epoch(self, epoch, data_loader):
     opt = self.opt
     self.model_with_loss.train()
     

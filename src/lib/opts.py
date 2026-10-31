@@ -279,7 +279,7 @@ class opts(object):
       lg.info('Fix size testing.' if opt.fix_res else 'Keep resolution testing.')
 
     if opt.head_conv == -1: # init default head_conv
-      opt.head_conv = 256 if 'dla' in opt.arch else 64 # dla-34，opt.head_conv = 256 
+      opt.head_conv = 256 if 'dla' in opt.arch else 64  # Default head width.
 
     opt.pad = 127 if 'hourglass' in opt.arch else 31 
     opt.num_stacks = 2 if opt.arch == 'hourglass' else 1 
@@ -295,7 +295,7 @@ class opts(object):
 
 
   def update_res_info_and_set_heads(self, opt):
-    opt.output_h = opt.input_h // opt.down_ratio # opt.output_h(w)：output resolution
+    opt.output_h = opt.input_h // opt.down_ratio # opt.output_h(w):output resolution
     opt.output_w = opt.input_w // opt.down_ratio
     opt.input_res = max(opt.input_h, opt.input_w) #  input_resolution
     opt.output_res = max(opt.output_h, opt.output_w) #  output_resolution

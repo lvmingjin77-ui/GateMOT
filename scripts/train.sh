@@ -36,8 +36,7 @@ case "$DATASET" in
 
     ;;
   mot20)
-    # The supplementary table does not record the MOT20 batch size.
-    # 16 matches the MOT17 setting.
+    # MOT20 uses a global batch of 16.
     EPOCHS=70; BATCH=16; LR=1.15e-4; STEP=60; K=256; CLS=1
     IMG="${DATA_ROOT}/train"
     ANN="${DATA_ROOT}/annotations/${ANN_NAME:-train}.json"

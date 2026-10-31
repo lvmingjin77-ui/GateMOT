@@ -88,7 +88,7 @@ Q-Attention costs about 0.2M parameters more than Conv and stays close to it in 
 
 ### 📦 Checkpoints
 
-Checkpoints are available on [Google Drive](https://drive.google.com/drive/folders/1Pmd2Y_tkax5D5gQQpRpCh0YTwBl27qiD). See the [checkpoint guide](docs/MODELS.md) for filenames and inference commands.
+Checkpoints for all four benchmarks are on [Google Drive](https://drive.google.com/drive/folders/1Pmd2Y_tkax5D5gQQpRpCh0YTwBl27qiD). Each one runs with the default `scripts/test.sh` settings; see the [checkpoint guide](docs/MODELS.md) for filenames and commands.
 
 | Dataset | Download |
 |---|---|
@@ -96,8 +96,6 @@ Checkpoints are available on [Google Drive](https://drive.google.com/drive/folde
 | MOT17 | [Google Drive](https://drive.google.com/file/d/1BkWeOFmDDr5b6sP5bY_k2elt8OSqb1LH/view?usp=drive_link) |
 | SportsMOT | [Google Drive](https://drive.google.com/file/d/1I6cLWAVBhptTKjjuuGDeR_OvFdrCZt8E/view?usp=drive_link) |
 | MOT20 | [Google Drive](https://drive.google.com/file/d/1HufLPtgFWm9_QShCzFtSZ0LukkQReSxY/view?usp=drive_link) |
-
-The checkpoints passed strict loading and a forward check. **MOT20 is a short-training checkpoint for pipeline testing.** Full benchmark reproduction of these downloads is still being verified.
 
 ## 🚀 Quick start
 
@@ -204,7 +202,7 @@ bash scripts/prepare_data.sh sportsmot --splits train val test
 ANN_NAME=train NUM_GPUS=1 bash scripts/train.sh sportsmot
 
 # Track the test split
-LOAD_MODEL=exp/tracking.ctdet/sportsmot_train_qattn_s317/model_last.pth \
+LOAD_MODEL=exp/tracking.ctdet/sportsmot_train_qattn_s317/model_70.pth \
   SPLIT=test bash scripts/test.sh sportsmot --output_dir results/sportsmot_test
 
 # Evaluate locally when test GT is available

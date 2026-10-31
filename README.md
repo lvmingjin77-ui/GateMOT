@@ -124,7 +124,7 @@ DCN uses torchvision, so no separate DCNv2 build is required. For training, put 
 
 ### Data preparation, training, tracking, and evaluation
 
-Each block below runs the full training split followed by test-set tracking. Replace `DATA_ROOT` with your dataset path and set `NUM_GPUS` to the available GPU count. The commands use the default Q-Attention experiment names and checkpoints produced by the training step.
+Set `DATA_ROOT` to your dataset path. The commands below train on the full training set using one GPU, then track the test set.
 
 The dataset root must contain `train/SEQ/img1/`, `train/SEQ/gt/gt.txt`, and `test/SEQ/img1/`. SportsMOT also has `val/`. See the [directory layout](docs/DATA_AND_TRAINING.md#directory-layout).
 
@@ -194,8 +194,6 @@ DATASET=mot20 SPLIT=test TRACKERS_FOLDER=results/mot20_test \
 
 #### [SportsMOT](https://github.com/MCG-NJU/SportsMOT) · DLA-60
 
-Both training and tracking select DLA-60 automatically.
-
 ```bash
 export DATASET=sportsmot DATA_ROOT=/path/to/SportsMOT/dataset
 
@@ -214,7 +212,7 @@ DATASET=sportsmot SPLIT=test TRACKERS_FOLDER=results/sportsmot_test \
   scripts/eval_hota.sh
 ```
 
-Tracking writes one MOT-format `.txt` per sequence. Metrics are saved in `results/<dataset>_test_eval_test/trackers/`. Use a fresh results directory for each run. `GLOBAL_BATCH` controls the total training batch size and must be divisible by `NUM_GPUS`; default schedules are listed in [training settings](docs/DATA_AND_TRAINING.md#training-settings).
+Tracking results are saved in `results/<dataset>_test/` and metrics in `results/<dataset>_test_eval_test/trackers/`. Use a fresh results directory for each run.
 
 For downloaded checkpoints, use the [matching inference commands](docs/MODELS.md#run-the-checkpoints).
 

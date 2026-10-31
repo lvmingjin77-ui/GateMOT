@@ -101,11 +101,11 @@ The checkpoints passed strict loading and a forward check. **MOT20 is a short-tr
 
 ## 🚀 Quick start
 
-The following workflow supports all four datasets. Run commands from the repository root after installation. Further options are in [Data and training](docs/DATA_AND_TRAINING.md).
+Install once, then run the commands for your dataset below from the repository root.
 
 <a id="installation"></a>
 
-**1️⃣ Install.** Linux, an NVIDIA GPU, and a C/C++ compiler. Reference environment: Python 3.8, PyTorch 2.4.1, torchvision 0.19.1, CUDA 12.1.
+**Install.** Linux, an NVIDIA GPU, and a C/C++ compiler. Reference environment: Python 3.8, PyTorch 2.4.1, torchvision 0.19.1, CUDA 12.1.
 
 ```bash
 git clone https://github.com/lvmingjin77-ui/GateMOT.git && cd GateMOT
@@ -120,51 +120,103 @@ git -C third_party/TrackEval checkout 12c8791b303e0a0b50f753af204249e622d0281a
 
 DCN uses torchvision, so no separate DCNv2 build is required. For training, put the ImageNet weights from the [DLA Model Zoo](http://dl.yf.io/dla/models/imagenet/) into `pretrain/` with their original filenames.
 
-**2️⃣ Prepare data.** Download a dataset in MOTChallenge layout, then build the annotation files:
+<a id="training"></a>
 
-| Dataset | `DATASET` | Example `DATA_ROOT` |
-|---|---|---|
-| [BEE24](https://holmescao.github.io/datasets/BEE24) | `bee24` | `/path/to/BEE24` |
-| [MOT17](https://motchallenge.net/data/MOT17/) | `mot17` | `/path/to/MOT17` |
-| [MOT20](https://motchallenge.net/data/MOT20/) | `mot20` | `/path/to/MOT20` |
-| [SportsMOT](https://github.com/MCG-NJU/SportsMOT) | `sportsmot` | `/path/to/SportsMOT/dataset` |
+### Data preparation, training, tracking, and evaluation
 
-Choose a row above and set both variables. Keep them set for the remaining steps:
+Each block below runs the full training split followed by test-set tracking. Replace `DATA_ROOT` with your dataset path and set `NUM_GPUS` to the available GPU count. The commands use the default Q-Attention experiment names and checkpoints produced by the training step.
+
+The dataset root must contain `train/SEQ/img1/`, `train/SEQ/gt/gt.txt`, and `test/SEQ/img1/`. SportsMOT also has `val/`. See the [directory layout](docs/DATA_AND_TRAINING.md#directory-layout).
+
+**Local evaluation requires `test/SEQ/gt/gt.txt`.** When test GT is hidden, skip the final evaluation command and submit the tracking files to the benchmark's evaluation server.
+
+#### [BEE24](https://holmescao.github.io/datasets/BEE24) · DLA-34
+
+```bash
+export DATASET=bee24 DATA_ROOT=/path/to/BEE24
+
+# Prepare data
+scripts/prepare_data.sh bee24 --splits train test
+
+# Train
+ANN_NAME=train NUM_GPUS=1 scripts/train.sh bee24
+
+# Track the test split
+LOAD_MODEL=exp/tracking.ctdet/bee24_train_qattn_s317/model_last.pth \
+  SPLIT=test scripts/test.sh bee24 --output_dir results/bee24_test
+
+# Evaluate locally when test GT is available
+DATASET=bee24 SPLIT=test TRACKERS_FOLDER=results/bee24_test \
+  scripts/eval_hota.sh
+```
+
+#### [MOT17](https://motchallenge.net/data/MOT17/) · DLA-34
+
+Only `*-FRCNN` sequences are used; DPM and SDP copies are skipped.
 
 ```bash
 export DATASET=mot17 DATA_ROOT=/path/to/MOT17
-scripts/prepare_data.sh "$DATASET"
+
+# Prepare data
+scripts/prepare_data.sh mot17 --splits train test
+
+# Train
+ANN_NAME=train NUM_GPUS=1 scripts/train.sh mot17
+
+# Track the test split
+LOAD_MODEL=exp/tracking.ctdet/mot17_train_qattn_s317/model_last.pth \
+  SPLIT=test scripts/test.sh mot17 --output_dir results/mot17_test
+
+# Evaluate locally when test GT is available
+DATASET=mot17 SPLIT=test TRACKERS_FOLDER=results/mot17_test \
+  scripts/eval_hota.sh
 ```
 
-This writes `annotations/train.json` and `annotations/test.json` (plus `val.json` for SportsMOT). The root must contain `train/SEQ/img1/`, `train/SEQ/gt/gt.txt`, and `test/SEQ/img1/`; SportsMOT also needs `val/`. Images stay in place. MOT17 uses only the `*-FRCNN` copy of each sequence. See the [directory layout](docs/DATA_AND_TRAINING.md#directory-layout).
-
-<a id="training"></a>
-
-**3️⃣ Train.** Training and tracking both select DLA-60 for SportsMOT and DLA-34 for BEE24/MOT17/MOT20. Set `NUM_GPUS` to the available GPU count (`1` for a single GPU).
+#### [MOT20](https://motchallenge.net/data/MOT20/) · DLA-34
 
 ```bash
-ANN_NAME=train NUM_GPUS=2 scripts/train.sh "$DATASET"
+export DATASET=mot20 DATA_ROOT=/path/to/MOT20
+
+# Prepare data
+scripts/prepare_data.sh mot20 --splits train test
+
+# Train
+ANN_NAME=train NUM_GPUS=1 scripts/train.sh mot20
+
+# Track the test split
+LOAD_MODEL=exp/tracking.ctdet/mot20_train_qattn_s317/model_last.pth \
+  SPLIT=test scripts/test.sh mot20 --output_dir results/mot20_test
+
+# Evaluate locally when test GT is available
+DATASET=mot20 SPLIT=test TRACKERS_FOLDER=results/mot20_test \
+  scripts/eval_hota.sh
 ```
 
-Checkpoints go to `exp/tracking.ctdet/${DATASET}_train_qattn_s317/`. `GLOBAL_BATCH` sets the total batch size and must be divisible by `NUM_GPUS`. Schedules are in [training settings](docs/DATA_AND_TRAINING.md#training-settings).
+#### [SportsMOT](https://github.com/MCG-NJU/SportsMOT) · DLA-60
 
-**4️⃣ Track.** Choose a checkpoint from the training run and a fresh results directory. One MOT-format `.txt` per sequence is written to `TRACKERS_FOLDER`.
+Both training and tracking select DLA-60 automatically.
 
 ```bash
-export LOAD_MODEL=exp/tracking.ctdet/${DATASET}_train_qattn_s317/model_last.pth
-export TRACKERS_FOLDER=results/${DATASET}_test
-SPLIT=test scripts/test.sh "$DATASET" --output_dir "$TRACKERS_FOLDER"
+export DATASET=sportsmot DATA_ROOT=/path/to/SportsMOT/dataset
+
+# Prepare data
+scripts/prepare_data.sh sportsmot --splits train val test
+
+# Train
+ANN_NAME=train NUM_GPUS=1 scripts/train.sh sportsmot
+
+# Track the test split
+LOAD_MODEL=exp/tracking.ctdet/sportsmot_train_qattn_s317/model_last.pth \
+  SPLIT=test scripts/test.sh sportsmot --output_dir results/sportsmot_test
+
+# Evaluate locally when test GT is available
+DATASET=sportsmot SPLIT=test TRACKERS_FOLDER=results/sportsmot_test \
+  scripts/eval_hota.sh
 ```
 
-For SportsMOT, the paper uses `model_70.pth` from the 80-epoch schedule. For downloaded weights, use the [matching commands](docs/MODELS.md#run-the-checkpoints).
+Tracking writes one MOT-format `.txt` per sequence. Metrics are saved in `results/<dataset>_test_eval_test/trackers/`. Use a fresh results directory for each run. `GLOBAL_BATCH` controls the total training batch size and must be divisible by `NUM_GPUS`; default schedules are listed in [training settings](docs/DATA_AND_TRAINING.md#training-settings).
 
-**5️⃣ Evaluate.** When test GT is available at `test/SEQ/gt/gt.txt`, keep the variables above and run:
-
-```bash
-SPLIT=test scripts/eval_hota.sh
-```
-
-Metrics land in `${TRACKERS_FOLDER}_eval_test/trackers/`. Hidden test splits can be tracked without GT; submit their tracking files to the benchmark's evaluation server for scores. See [evaluation details](docs/DATA_AND_TRAINING.md#evaluation).
+For downloaded checkpoints, use the [matching inference commands](docs/MODELS.md#run-the-checkpoints).
 
 <details>
 <summary><b>🎬 Bonus: render your own tracking video</b></summary>
@@ -207,7 +259,7 @@ MOT17 ships each video three times (DPM, FRCNN, SDP) with identical images and G
 <summary><b>Training was interrupted. How do I resume?</b></summary>
 
 ```bash
-ANN_NAME=train NUM_GPUS=2 scripts/train.sh "$DATASET" \
+ANN_NAME=train NUM_GPUS=1 scripts/train.sh "$DATASET" \
   --resume --load_model "exp/tracking.ctdet/${DATASET}_train_qattn_s317/model_last.pth"
 ```
 
